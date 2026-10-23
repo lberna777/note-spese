@@ -18,14 +18,43 @@ lasciano mai il telefono, salvo il file che l'utente sceglie di esportare o cond
 
 ## Funzioni
 
-- Foto o immagine dalla galleria, lettura automatica di importo, data, fornitore, metodo di
-  pagamento e carta, con schermata di conferma precompilata.
-- Destinatari (clienti e propria azienda), carte (aziendale o personale), tratte con rimborso
-  chilometrico.
-- Elenco del mese, con distinzione tra spese pagate dall'azienda e spese anticipate dal
-  consulente, e riepilogo degli anticipi da farsi rimborsare.
-- Nota spese per destinatario in PDF e in Excel (con formule), salvataggio e ripristino di una
-  copia di sicurezza.
+- Foto o immagine dalla galleria, lettura automatica di importo, data, fornitore, località e
+  tipologia, con schermata di conferma precompilata.
+- Destinatari (clienti e propria azienda), tratte con rimborso chilometrico.
+- Pagamento con due sole carte, «Carta aziendale» e «Carta personale», scelte con due pulsanti
+  grandi; la proposta è l'ultimo pagamento usato per lo stesso destinatario. Nessun numero di
+  carta viene letto o conservato.
+- Elenco del mese, con distinzione tra spese pagate con la carta aziendale e spese anticipate con
+  la carta personale, e riepilogo degli anticipi da farsi rimborsare.
+- Nota spese per destinatario in PDF (con i giustificativi in coda) e in Excel (con formule),
+  salvataggio e ripristino di una copia di sicurezza.
+- Tema grafico importabile (vedi sotto).
+- Su iPhone e iPad, se l'app non è ancora sulla schermata Home, un riquadro chiudibile spiega
+  come aggiungerla (altrimenti Safari può cancellare i dati del sito).
+
+## Tema importabile
+
+Nome, logo e colori dell'azienda non stanno nel codice: si caricano da un file `.json` in
+Impostazioni → Aspetto → «Importa tema» e restano solo nel telefono (IndexedDB, e nel backup).
+«Torna al tema predefinito» ripristina i colori neutri. Il tema colora l'app, il PDF e l'Excel.
+
+```json
+{ "format": "note-spese-tema", "version": 1,
+  "companyName": "Nome dell'azienda", "logo": "data:image/png;base64,…",
+  "colors": { "primary": "#RRGGBB", "accent": "#RRGGBB", "accentText": "#RRGGBB",
+              "surface": "#RRGGBB", "text": "#RRGGBB", "textMuted": "#RRGGBB" },
+  "fonts": { "heading": "serif", "body": "sans" } }
+```
+
+- `primary`: colore scuro delle fasce (intestazioni, barra); `accent`: colore del marchio per
+  filetti e dettagli; `accentText`: variante dell'accento leggibile come testo su `surface`;
+  `surface`: fondo chiaro.
+- `logo`: data URL PNG, JPEG o SVG, al massimo 500 KB (facoltativo). Colori in `#RRGGBB`, testi
+  al massimo 120 caratteri.
+- `fonts.heading`: `serif` (Bodoni Moda; Times nel PDF) o `system`; `fonts.body`: `sans` (Inter)
+  o `system`. I caratteri sono serviti dall'app, senza servizi esterni.
+
+Un tema d'esempio, tutto inventato, è `public/esempi/tema-esempio.json` («Studio Aurora S.r.l.»).
 
 ## Avvio
 
@@ -46,7 +75,7 @@ HTTPS.
 
 ## Prova veloce
 
-In `public/esempi/` ci sono tre scontrini finti: «Scegli dalla galleria» → uno di questi →
+In `public/esempi/` ci sono tre scontrini finti e il tema d'esempio. Per vedere il tema: Impostazioni → Aspetto → «Importa tema» → `tema-esempio.json`. Poi: «Scegli dalla galleria» → uno di questi →
 «Conferma spesa» precompilata → Salva → «Nota spese» del destinatario → PDF / Excel.
 
 ## Note
@@ -66,5 +95,6 @@ In `public/esempi/` ci sono tre scontrini finti: «Scegli dalla galleria» → u
 | jspdf-autotable | tabelle nel PDF | MIT |
 | ExcelJS | generazione Excel | MIT |
 | idb | accesso a IndexedDB | ISC |
+| Bodoni Moda, Inter (Fontsource) | caratteri del tema | OFL-1.1 |
 
 Il progetto è scritto in TypeScript e costruito con Vite; i test usano Vitest.

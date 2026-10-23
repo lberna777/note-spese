@@ -10,7 +10,7 @@ export function AdvancesScreen(props: { data: AppData; month: string; onMonth: (
     <div class="page">
       <h1>I tuoi anticipi</h1>
       <MonthPicker month={props.month} onChange={props.onMonth} />
-      <p class="muted">Quanto hai pagato di tasca propria (carta personale o contanti) e deve ricevere indietro.</p>
+      <p class="muted">Quanto hai anticipato con la carta personale e deve esserti rimborsato.</p>
       <ul class="expenses">
         {rows.map((r) => (
           <li key={r.recipient.id} class="expense static">

@@ -10,7 +10,7 @@
   --warn-border: #d9b300;
   --danger: #a32a2a;
   --radius: 12px;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
   font-size: 17px;
   line-height: 1.35;
 }
@@ -29,10 +29,11 @@
   }
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text); }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body, inherit); }
+button, input, select, textarea { font-family: inherit; }
 body { padding-bottom: env(safe-area-inset-bottom); }
-h1 { font-size: 1.35rem; margin: 0.5rem 0; }
-h2 { font-size: 1.1rem; margin: 0; }
+h1 { font-size: 1.35rem; margin: 0.5rem 0; font-family: var(--font-heading, inherit); }
+h2 { font-size: 1.1rem; margin: 0; font-family: var(--font-heading, inherit); }
 small { display: block; color: var(--muted); font-size: 0.8rem; }
 .muted, .hint { color: var(--muted); font-size: 0.9rem; }
 
@@ -116,5 +117,32 @@ input[type='text'], input[type='date'], input[type='number'], select, textarea {
   padding-bottom: env(safe-area-inset-bottom); z-index: 10; max-width: 560px; margin: 0 auto;
 }
 .tabs button { flex: 1; font: inherit; color: var(--muted); background: none; border: 0; min-height: 56px; cursor: pointer; }
-.tabs button.active { color: var(--primary); font-weight: 700; box-shadow: inset 0 3px 0 var(--primary); }
+.tabs button.active { color: var(--accent-text, var(--primary)); font-weight: 700; box-shadow: inset 0 3px 0 var(--accent, var(--primary)); }
 progress { width: 80%; height: 14px; }
+
+/* Barra del marchio (tema importato) */
+.brand-bar {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; padding-top: calc(0.5rem + env(safe-area-inset-top));
+  background: var(--band, var(--primary)); color: var(--on-band, var(--on-primary)); border-bottom: 3px solid var(--accent, var(--primary));
+}
+.brand-logo { height: 34px; max-width: 140px; object-fit: contain; }
+.brand-name { font-family: var(--font-heading, inherit); font-weight: 700; font-size: 1.1rem; }
+
+/* Pagato con: due pulsanti grandi affiancati */
+.pay-choice { display: flex; gap: 0.5rem; }
+.pay-btn {
+  flex: 1; font: inherit; font-weight: 600; min-height: 64px; border-radius: var(--radius); cursor: pointer;
+  color: var(--primary); background: var(--surface); border: 2px solid var(--border);
+}
+.pay-btn.on { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.field.warn .pay-btn:not(.on) { background: var(--warn-bg); border-color: var(--warn-border); }
+
+/* Suggerimento per iPhone */
+.ios-hint { display: flex; align-items: center; gap: 0.5rem; border-color: var(--accent, var(--primary)); }
+.ios-hint span { flex: 1; }
+
+/* Anteprima del tema nelle Impostazioni */
+.theme-preview { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.theme-logo { height: 40px; max-width: 120px; object-fit: contain; }
+.swatches { display: flex; gap: 0.3rem; margin-left: auto; }
+.swatch { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--border); display: inline-block; }

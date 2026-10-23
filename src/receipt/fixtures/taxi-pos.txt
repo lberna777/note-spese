@@ -5,6 +5,5 @@ Corsa n. 4471
 Partenza: Stazione Centrale
 Arrivo: Via Esempio 3
 IMPORTO       EUR 18,50
-POS XXXX XXXX XXXX 1937
 15.10.2026 ore 19:22
 GRAZIE E BUON VIAGGIO

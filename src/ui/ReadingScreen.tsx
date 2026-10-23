@@ -35,7 +35,6 @@ export function ReadingScreen(props: { file: File; data: AppData; onDone: (r: Re
         const { readText } = await import('../receipt/ocr');
         const text = await readText(blob, (f) => !cancelled && setProgress(f));
         draft = parseReceipt(text, {
-          cards: props.data.cards,
           recipients: props.data.recipients,
           knownSuppliers: props.data.suppliers,
         });

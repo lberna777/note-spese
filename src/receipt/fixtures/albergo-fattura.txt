@@ -12,4 +12,3 @@ Imposta di soggiorno          5,00
 Imponibile                  104,55
 IVA 10%                      10,45
 TOTALE DOCUMENTO            115,00
-PAGATO CON CARTA ************1937

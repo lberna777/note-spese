@@ -4,11 +4,9 @@ import { describe, expect, it } from 'vitest';
 import type { ParseContext } from '../types';
 import {
   findAmounts,
-  findCardLast4,
   findDate,
   findInvoice,
   findKeywordCategory,
-  findPayment,
   findPlace,
   findSupplier,
   findTotal,
@@ -21,12 +19,8 @@ import {
 const fixture = (name: string) =>
   readFileSync(join(process.cwd(), 'src', 'receipt', 'fixtures', `${name}.txt`), 'utf8');
 
-// Dati inventati: due carte, un fornitore noto.
+// Dati inventati: un fornitore noto.
 const ctx: ParseContext = {
-  cards: [
-    { id: 'c-azienda', name: 'Carta aziendale', owner: 'azienda', last4: '4821' },
-    { id: 'c-personale', name: 'Carta personale', owner: 'personale', last4: '1937' },
-  ],
   recipients: [],
   knownSuppliers: [{ name: 'PARKING CENTRO', category: 'parcheggio', place: 'Bologna' }],
 };
@@ -158,42 +152,6 @@ describe('findInvoice', () => {
   });
 });
 
-describe('carta e pagato da', () => {
-  it('riconosce i formati con asterischi e X', () => {
-    expect(findCardLast4('****4821')).toBe('4821');
-    expect(findCardLast4('XXXX XXXX XXXX 4821')).toBe('4821');
-    expect(findCardLast4('PAN ************4821')).toBe('4821');
-    expect(findCardLast4('**** **** **** 1O37')).toBe('1037');
-    expect(findCardLast4('IMPORTO 4821')).toBeUndefined();
-  });
-  it('carta in elenco: cardId e proprietario, alta', () => {
-    expect(findPayment('****4821', ctx.cards)).toEqual({
-      cardId: { value: 'c-azienda', confidence: 'alta' },
-      payer: { value: 'azienda', confidence: 'alta' },
-    });
-    expect(findPayment('****1937', ctx.cards).payer?.value).toBe('personale');
-  });
-  it('contanti senza carta: cardId null, pagato dal consulente', () => {
-    expect(findPayment('PAGAMENTO CONTANTE 10,00', ctx.cards)).toEqual({
-      cardId: { value: null, confidence: 'alta' },
-      payer: { value: 'personale', confidence: 'alta' },
-    });
-    expect(findPayment('Pagamento contanti', ctx.cards).payer?.value).toBe('personale');
-  });
-  it('«CONTANTE 0,00» non è un pagamento in contanti', () => {
-    expect(findPayment('CONTANTE 0,00', ctx.cards)).toEqual({});
-  });
-  it('carta con contanti accanto: vince la carta', () => {
-    expect(findPayment('CONTANTE 0,00\n****4821', ctx.cards).payer?.value).toBe('azienda');
-  });
-  it('carta non in elenco: niente cardId né pagato da', () => {
-    expect(findPayment('****9999', ctx.cards)).toEqual({});
-  });
-  it('nulla: assente', () => {
-    expect(findPayment('TOTALE 5,00', ctx.cards)).toEqual({});
-  });
-});
-
 describe('tipologia', () => {
   it.each([
     ['TRENITALIA', 'treno'],
@@ -230,7 +188,7 @@ describe('tipologia', () => {
 });
 
 describe('fixture di scontrini finti', () => {
-  it('trattoria, documento commerciale, carta aziendale', () => {
+  it('trattoria, documento commerciale', () => {
     const d = parseReceipt(fixture('trattoria-carta'), ctx);
     expect(d).toEqual({
       amountCents: { value: 2750, confidence: 'alta' },
@@ -238,8 +196,6 @@ describe('fixture di scontrini finti', () => {
       supplier: { value: 'TRATTORIA DA GINO S.R.L.', confidence: 'bassa' },
       place: { value: 'Bologna', confidence: 'alta' },
       invoice: { value: false, confidence: 'alta' },
-      cardId: { value: 'c-azienda', confidence: 'alta' },
-      payer: { value: 'azienda', confidence: 'alta' },
       category: { value: 'pasto', confidence: 'bassa' },
     });
   });
@@ -250,18 +206,14 @@ describe('fixture di scontrini finti', () => {
     expect(d.supplier?.value).toBe('BAR SPORT DI ROSSI');
     expect(d.place?.value).toBe('Imola');
     expect(d.invoice).toEqual({ value: false, confidence: 'alta' });
-    expect(d.cardId).toEqual({ value: null, confidence: 'alta' });
-    expect(d.payer?.value).toBe('personale');
     expect(d.category?.value).toBe('pasto');
   });
-  it('taxi con ricevuta POS (carta personale)', () => {
+  it('taxi con ricevuta', () => {
     const d = parseReceipt(fixture('taxi-pos'), ctx);
     expect(d.amountCents).toEqual({ value: 1850, confidence: 'alta' });
     expect(d.date?.value).toBe('2026-10-15');
     expect(d.supplier?.value).toBe('RADIOTAXI BOLOGNA');
     expect(d.place).toBeUndefined();
-    expect(d.cardId?.value).toBe('c-personale');
-    expect(d.payer?.value).toBe('personale');
     expect(d.category?.value).toBe('taxi');
     expect(d.invoice?.confidence).toBe('bassa');
   });
@@ -271,7 +223,6 @@ describe('fixture di scontrini finti', () => {
     expect(d.date).toEqual({ value: '2026-10-14', confidence: 'alta' });
     expect(d.supplier?.value).toBe('TRENITALIA');
     expect(d.category?.value).toBe('treno');
-    expect(d.payer?.value).toBe('azienda');
   });
   it('fattura di albergo con P.IVA', () => {
     const d = parseReceipt(fixture('albergo-fattura'), ctx);
@@ -281,8 +232,6 @@ describe('fixture di scontrini finti', () => {
     expect(d.place?.value).toBe('Milano');
     expect(d.invoice).toEqual({ value: true, confidence: 'alta' });
     expect(d.category?.value).toBe('alloggio');
-    expect(d.cardId?.value).toBe('c-personale');
-    expect(d.payer?.value).toBe('personale');
   });
   it('parcheggio (fornitore sconosciuto, parola chiave)', () => {
     const d = parseReceipt(fixture('parcheggio'), noKnown);
@@ -291,7 +240,6 @@ describe('fixture di scontrini finti', () => {
     expect(d.supplier?.value).toBe('PARKING CENTRO S.R.L.S.');
     expect(d.place?.value).toBe('San Lazzaro di Savena');
     expect(d.category).toEqual({ value: 'parcheggio', confidence: 'bassa' });
-    expect(d.payer?.value).toBe('personale');
     expect(d.invoice).toEqual({ value: false, confidence: 'bassa' });
   });
   it('parcheggio con fornitore noto', () => {
@@ -306,7 +254,6 @@ describe('fixture di scontrini finti', () => {
     expect(d.supplier?.value).toBe('RISTORANTE LA PIAZZETTA SNC');
     expect(d.place?.value).toBe('Bologna');
     expect(d.invoice).toEqual({ value: false, confidence: 'alta' });
-    expect(d.cardId?.value).toBe('c-azienda'); // «4B21» letto come 4821
     expect(d.category?.value).toBe('pasto');
   });
   it('senza riga TOTALE: importo massimo, bassa', () => {
@@ -314,15 +261,12 @@ describe('fixture di scontrini finti', () => {
     expect(d.amountCents).toEqual({ value: 850, confidence: 'bassa' });
     expect(d.date?.value).toBe('2026-10-11');
     expect(d.place?.value).toBe('Bologna');
-    expect(d.payer?.value).toBe('personale');
     expect(d.category?.value).toBe('pasto');
   });
-  it('carta non in elenco e data impossibile scartata', () => {
+  it('importo con migliaia e data impossibile scartata', () => {
     const d = parseReceipt(fixture('sconosciuta-carta'), ctx);
     expect(d.amountCents).toEqual({ value: 123450, confidence: 'alta' });
     expect(d.date).toEqual({ value: '2026-11-05', confidence: 'alta' });
-    expect(d.cardId).toBeUndefined();
-    expect(d.payer).toBeUndefined();
     expect(d.category).toBeUndefined();
     expect(d.invoice).toEqual({ value: false, confidence: 'alta' });
   });

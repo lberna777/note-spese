@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'preact/hooks';
 import { deleteExpense, deletePhoto, newId, putExpense, putKnownSupplier } from '../db';
 import { CATEGORIES, CATEGORY_LABELS, PAYER_LABELS } from '../labels';
+import { suggestPayer } from '../payer';
 import { autoAmountCents, autoKm, formatDecimal, formatEuro, parseAmount } from '../money';
 import type { Category, Expense, Payer, ReadState, ReceiptDraft } from '../types';
 import { Field, Sheet, usePhotoUrl, val } from './common';
 import type { AppData } from './useData';
 
-type ReadField = 'date' | 'amountCents' | 'supplier' | 'place' | 'category' | 'invoice' | 'payer' | 'cardId';
+type ReadField = 'date' | 'amountCents' | 'supplier' | 'place' | 'category' | 'invoice';
+const READ_FIELDS: ReadField[] = ['date', 'amountCents', 'supplier', 'place', 'category', 'invoice'];
 
 export interface FormProps {
   data: AppData;
@@ -43,7 +45,7 @@ export function ExpenseForm(props: FormProps) {
     if (existing) {
       e = existing;
       if (existing.readState === 'letta') {
-        for (const k of ['date', 'amountCents', 'supplier', 'place', 'category', 'invoice', 'payer', 'cardId'] as ReadField[]) read[k] = existing[k];
+        for (const k of READ_FIELDS) read[k] = existing[k];
       }
     } else {
       const date = draft?.date?.value ?? props.defaultDate;
@@ -51,18 +53,16 @@ export function ExpenseForm(props: FormProps) {
       e = {
         id: newId(), date, recipientId, place: draft?.place?.value ?? '', supplier: draft?.supplier?.value ?? '',
         category: draft?.category?.value ?? (photoId ? 'pasto' : 'altro'), amountCents: draft?.amountCents?.value ?? 0,
-        invoice: draft?.invoice?.value ?? false, payer: draft?.payer?.value ?? 'personale', cardId: draft?.cardId?.value ?? null,
+        invoice: draft?.invoice?.value ?? false, payer: suggestPayer(data.expenses, recipientId),
         routeId: null, roundTrip: false, km: null, photoId, notes: '', readState: photoId ? 'letta' : 'manuale',
       };
       if (draft && photoId) {
-        for (const k of Object.keys(draft) as ReadField[]) if (draft[k]) read[k] = e[k];
-        for (const k of ['date', 'amountCents', 'supplier', 'place', 'category', 'invoice', 'payer'] as ReadField[]) {
+        for (const k of READ_FIELDS) if (draft[k]) read[k] = e[k];
+        for (const k of READ_FIELDS) {
           if (!draft[k] || draft[k]!.confidence === 'bassa') low.add(k);
         }
-        // cardId non letto: pagato da / carta restano da controllare insieme
-        if (low.has('payer')) low.add('cardId');
       } else if (photoId) {
-        for (const k of ['date', 'amountCents', 'supplier', 'place', 'category', 'invoice', 'payer'] as ReadField[]) low.add(k);
+        for (const k of READ_FIELDS) low.add(k);
       }
     }
     return { e, read, low };
@@ -76,7 +76,7 @@ export function ExpenseForm(props: FormProps) {
   const [amountText, setAmountText] = useState(init.e.amountCents ? formatDecimal(init.e.amountCents) : '');
   const [invoice, setInvoice] = useState(init.e.invoice);
   const [payer, setPayer] = useState<Payer>(init.e.payer);
-  const [cardId, setCardId] = useState<string>(init.e.cardId ?? '');
+  const [payerTouched, setPayerTouched] = useState(false);
   const [routeId, setRouteId] = useState<string>(init.e.routeId ?? data.routes[0]?.id ?? '');
   const [roundTrip, setRoundTrip] = useState(existing ? init.e.roundTrip : true);
   const [notes, setNotes] = useState(init.e.notes);
@@ -89,17 +89,18 @@ export function ExpenseForm(props: FormProps) {
   const km = isAuto && route ? autoKm(route, roundTrip) : null;
   const autoCents = km != null ? autoAmountCents(km, data.settings.centsPerKm) : null;
   const warn = (k: ReadField) => init.low.has(k);
+  // La foto non dice con quale carta si è pagato: per le spese da foto il campo resta da controllare.
+  const payerWarn = !existing && !!photoId;
   const recipient = data.recipients.find((r) => r.id === recipientId);
 
-  function chooseCard(id: string) {
-    setCardId(id);
-    const c = data.cards.find((x) => x.id === id);
-    if (c) setPayer(c.owner);
-  }
   function choosePayer(p: Payer) {
     setPayer(p);
-    const c = data.cards.find((x) => x.id === cardId);
-    if (c && c.owner !== p) setCardId('');
+    setPayerTouched(true);
+  }
+  // Cambiando destinatario si ripropone il suo ultimo pagamento, se non è già stato scelto a mano.
+  function chooseRecipient(id: string) {
+    setRecipientId(id);
+    if (!existing && !payerTouched) setPayer(suggestPayer(data.expenses, id));
   }
 
   async function save(ev: Event) {
@@ -112,7 +113,7 @@ export function ExpenseForm(props: FormProps) {
     const finalPlace = place.trim() || recipient?.defaultPlace || '';
     const finalSupplier = supplier.trim() || (isAuto ? 'Viaggio in auto' : '');
     const current: Record<ReadField, unknown> = {
-      date, amountCents, supplier: finalSupplier, place: finalPlace, category, invoice, payer, cardId: cardId || null,
+      date, amountCents, supplier: finalSupplier, place: finalPlace, category, invoice,
     };
     let readState: ReadState;
     if (!photoId) readState = 'manuale';
@@ -123,7 +124,7 @@ export function ExpenseForm(props: FormProps) {
     }
     const exp: Expense = {
       id: init.e.id, date, recipientId, place: finalPlace, supplier: finalSupplier, category, amountCents, invoice,
-      payer, cardId: cardId || null, routeId: isAuto ? routeId : null, roundTrip: isAuto ? roundTrip : false,
+      payer, routeId: isAuto ? routeId : null, roundTrip: isAuto ? roundTrip : false,
       km: isAuto ? km : null, photoId, notes: notes.trim(), readState,
     };
     await putExpense(exp);
@@ -169,7 +170,7 @@ export function ExpenseForm(props: FormProps) {
           <input type="date" required value={date} onInput={(e) => setDate(val(e))} />
         </Field>
         <Field label="Destinatario">
-          <select value={recipientId} onChange={(e) => setRecipientId(val(e))}>
+          <select value={recipientId} onChange={(e) => chooseRecipient(val(e))}>
             {data.recipients.filter((r) => r.active || r.id === recipientId).map((r) => (
               <option value={r.id} key={r.id}>{r.name}</option>
             ))}
@@ -213,17 +214,16 @@ export function ExpenseForm(props: FormProps) {
           <input type="checkbox" checked={invoice} onChange={(e) => setInvoice((e.target as HTMLInputElement).checked)} />
           C’è la fattura{warn('invoice') ? ' (da controllare)' : ''}
         </label>
-        <Field label="Pagato da" warn={warn('payer')}>
-          <select value={payer} onChange={(e) => choosePayer(val(e) as Payer)}>
-            {(Object.keys(PAYER_LABELS) as Payer[]).map((p) => <option value={p} key={p}>{PAYER_LABELS[p]}</option>)}
-          </select>
-        </Field>
-        <Field label="Carta o contanti" warn={warn('cardId')}>
-          <select value={cardId} onChange={(e) => chooseCard(val(e))}>
-            <option value="">Contanti</option>
-            {data.cards.map((c) => <option value={c.id} key={c.id}>{c.name} ****{c.last4}</option>)}
-          </select>
-        </Field>
+        <div class={`field${payerWarn ? ' warn' : ''}`} role="group" aria-label="Pagato con">
+          <span class="field-label">Pagato con{payerWarn ? ' (da controllare)' : ''}</span>
+          <div class="pay-choice">
+            {(Object.keys(PAYER_LABELS) as Payer[]).map((p) => (
+              <button type="button" key={p} class={`pay-btn${payer === p ? ' on' : ''}`} aria-pressed={payer === p} onClick={() => choosePayer(p)}>
+                {PAYER_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
         <Field label="Note">
           <textarea rows={2} value={notes} onInput={(e) => setNotes(val(e))} />
         </Field>

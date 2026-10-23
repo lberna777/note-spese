@@ -1,5 +1,6 @@
-import { useRef } from 'preact/hooks';
-import { categoryText } from '../export/rows';
+import { useRef, useState } from 'preact/hooks';
+import { categoryText, payerText } from '../export/rows';
+import { currentDevice, dismissIosHint, iosHintDismissed, shouldShowIosHint } from '../ios';
 import { shortDate } from '../labels';
 import { formatEuro } from '../money';
 import { monthTotals } from '../totals';
@@ -26,6 +27,7 @@ export function MonthScreen(props: {
   const { data, month } = props;
   const camera = useRef<HTMLInputElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
+  const [iosHint, setIosHint] = useState(() => shouldShowIosHint(currentDevice()) && !iosHintDismissed());
   const groups = data.recipients
     .map((r) => ({ r, t: monthTotals(data.expenses, r, month) }))
     .filter((g) => g.t.rows.length > 0);
@@ -39,6 +41,12 @@ export function MonthScreen(props: {
 
   return (
     <div class="page">
+      {iosHint ? (
+        <div class="banner ios-hint" role="note">
+          <span>Per usarla come un’app e non perdere i dati: tocca Condividi, poi «Aggiungi alla schermata Home».</span>
+          <button type="button" class="btn ghost" aria-label="Chiudi il suggerimento" onClick={() => { dismissIosHint(); setIosHint(false); }}>✕</button>
+        </div>
+      ) : null}
       {backupOverdue(data.settings.lastBackupAt) ? (
         <button type="button" class="banner warn-banner link" onClick={props.onGoSettings}>
           {data.settings.lastBackupAt ? 'L’ultimo backup ha più di 30 giorni.' : 'Non hai ancora fatto un backup.'} Tocca per esportarlo.
@@ -68,7 +76,7 @@ export function MonthScreen(props: {
                   <span class="date">{shortDate(e.date)}</span>
                   <span class="grow">
                     {e.supplier || categoryText(e)}
-                    <small>{categoryText(e)} · {e.payer === 'personale' ? 'anticipata da te' : "pagata dall'azienda"}{e.invoice ? ' · fattura' : ''}</small>
+                    <small>{categoryText(e)} · {payerText(e)}{e.invoice ? ' · fattura' : ''}</small>
                   </span>
                   <strong>{formatEuro(e.amountCents)}</strong>
                 </button>

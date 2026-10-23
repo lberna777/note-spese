@@ -22,13 +22,6 @@ export interface Recipient {
   active: boolean;
 }
 
-export interface Card {
-  id: Id;
-  name: string;
-  owner: Payer;
-  last4: string;
-}
-
 export interface Route {
   id: Id;
   from: string;
@@ -54,7 +47,6 @@ export interface Expense {
   amountCents: number;
   invoice: boolean;
   payer: Payer;
-  cardId: Id | null; // null = contanti
   routeId: Id | null; // solo auto
   roundTrip: boolean; // solo auto
   km: number | null;
@@ -89,12 +81,9 @@ export interface ReceiptDraft {
   place?: Field<string>;
   category?: Field<Category>;
   invoice?: Field<boolean>;
-  payer?: Field<Payer>;
-  cardId?: Field<Id | null>;
 }
 
 export interface ParseContext {
-  cards: Card[];
   recipients: Recipient[];
   knownSuppliers: KnownSupplier[];
 }

@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
-import { getSettings, listCards, listExpenses, listKnownSuppliers, listRecipients, listRoutes } from '../db';
-import type { Card, Expense, KnownSupplier, Recipient, Route, Settings } from '../types';
+import { getSettings, getTheme, listExpenses, listKnownSuppliers, listRecipients, listRoutes } from '../db';
+import type { Theme } from '../theme';
+import type { Expense, KnownSupplier, Recipient, Route, Settings } from '../types';
 
 export interface AppData {
   expenses: Expense[];
   recipients: Recipient[];
-  cards: Card[];
   routes: Route[];
   settings: Settings;
   suppliers: KnownSupplier[];
+  theme: Theme;
 }
 
 export async function loadData(): Promise<AppData> {
-  const [expenses, recipients, cards, routes, settings, suppliers] = await Promise.all([
-    listExpenses(), listRecipients(), listCards(), listRoutes(), getSettings(), listKnownSuppliers(),
+  const [expenses, recipients, routes, settings, suppliers, theme] = await Promise.all([
+    listExpenses(), listRecipients(), listRoutes(), getSettings(), listKnownSuppliers(), getTheme(),
   ]);
-  return { expenses, recipients, cards, routes, settings, suppliers };
+  return { expenses, recipients, routes, settings, suppliers, theme };
 }
 
 export function useData(): { data: AppData | null; reload: () => Promise<void>; error: string | null } {

@@ -1,14 +1,14 @@
 import { useState } from 'preact/hooks';
 import { exportBackup, importBackup } from '../backup';
-import { deleteCard, deleteRoute, newId, putCard, putRecipient, putRoute, putSettings } from '../db';
+import { deleteRoute, deleteTheme, newId, putRecipient, putRoute, putSettings, putTheme } from '../db';
 import { formatRatePerKm, parseRatePerKm } from '../money';
-import type { Card, Payer, Recipient, RecipientKind, Route } from '../types';
+import { isDefaultTheme, parseThemeText } from '../theme';
+import type { Recipient, RecipientKind, Route } from '../types';
 import { Field, Sheet, val } from './common';
 import type { AppData } from './useData';
 
 type Editing =
   | { kind: 'recipient'; item: Recipient }
-  | { kind: 'card'; item: Card }
   | { kind: 'route'; item: Route }
   | null;
 
@@ -50,6 +50,27 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
     }
   }
 
+  async function doImportTheme(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const f = input.files?.[0];
+    input.value = '';
+    if (!f) return;
+    try {
+      const theme = parseThemeText(await f.text());
+      await putTheme(theme);
+      await reload();
+      setMsg(`Tema «${theme.companyName}» importato.`);
+    } catch (err) {
+      setMsg(String((err as Error).message));
+    }
+  }
+
+  async function resetTheme() {
+    await deleteTheme();
+    await reload();
+    setMsg('Tema predefinito ripristinato.');
+  }
+
   if (editing) {
     return <EditorSheet editing={editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await reload(); }} />;
   }
@@ -71,20 +92,6 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
           ))}
         </ul>
         <button type="button" class="btn" onClick={() => setEditing({ kind: 'recipient', item: { id: newId(), name: '', kind: 'cliente', defaultPlace: '', active: true } })}>Aggiungi destinatario</button>
-      </section>
-
-      <section class="group">
-        <h2>Carte</h2>
-        <ul class="expenses">
-          {data.cards.map((c) => (
-            <li key={c.id}>
-              <button type="button" class="expense" onClick={() => setEditing({ kind: 'card', item: c })}>
-                <span class="grow">{c.name}<small>intestata a {c.owner === 'azienda' ? 'Azienda' : 'Personale'} · ****{c.last4}</small></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button type="button" class="btn" onClick={() => setEditing({ kind: 'card', item: { id: newId(), name: '', owner: 'azienda', last4: '' } })}>Aggiungi carta</button>
       </section>
 
       <section class="group">
@@ -113,6 +120,25 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
       </form>
 
       <section class="group">
+        <h2>Aspetto</h2>
+        <div class="theme-preview" data-testid="theme-preview">
+          {data.theme.logo ? <img src={data.theme.logo} alt="Logo del tema" class="theme-logo" /> : null}
+          <strong>{data.theme.companyName || 'Tema predefinito'}</strong>
+          <span class="swatches" aria-label="Colori del tema">
+            {Object.entries(data.theme.colors).map(([k, c]) => (
+              <i key={k} class="swatch" style={{ background: c }} title={`${k} ${c}`} />
+            ))}
+          </span>
+        </div>
+        <p class="muted">Il tema (nome, logo e colori dell’azienda) si importa da un file .json e resta solo nel telefono.</p>
+        <label class="btn file-btn">
+          Importa tema
+          <input type="file" accept="application/json,.json" hidden onChange={(e) => void doImportTheme(e)} />
+        </label>
+        <button type="button" class="btn" disabled={isDefaultTheme(data.theme)} onClick={() => void resetTheme()}>Torna al tema predefinito</button>
+      </section>
+
+      <section class="group">
         <h2>Backup</h2>
         <p class="muted">
           {data.settings.lastBackupAt ? `Ultimo backup: ${new Date(data.settings.lastBackupAt).toLocaleDateString('it-IT')}.` : 'Nessun backup ancora.'} Il file contiene dati e foto e resta dove lo salvi tu.
@@ -131,9 +157,9 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
 
 function EditorSheet(props: { editing: NonNullable<Editing>; onClose: () => void; onSaved: () => Promise<void> }) {
   const { editing } = props;
-  const [item, setItem] = useState<Recipient | Card | Route>(editing.item);
+  const [item, setItem] = useState<Recipient | Route>(editing.item);
   const [err, setErr] = useState<string | null>(null);
-  const patch = (p: Partial<Recipient & Card & Route>) => setItem({ ...item, ...p } as typeof item);
+  const patch = (p: Partial<Recipient & Route>) => setItem({ ...item, ...p } as typeof item);
 
   async function save(e: Event) {
     e.preventDefault();
@@ -141,11 +167,6 @@ function EditorSheet(props: { editing: NonNullable<Editing>; onClose: () => void
       const r = item as Recipient;
       if (!r.name.trim()) return setErr('Scrivi il nome.');
       await putRecipient({ ...r, name: r.name.trim(), defaultPlace: r.defaultPlace.trim() });
-    } else if (editing.kind === 'card') {
-      const c = item as Card;
-      if (!c.name.trim()) return setErr('Scrivi il nome.');
-      if (!/^\d{4}$/.test(c.last4)) return setErr('Servono le ultime 4 cifre.');
-      await putCard({ ...c, name: c.name.trim() });
     } else {
       const r = item as Route;
       if (!r.from.trim() || !r.to.trim() || !(r.km > 0)) return setErr('Indica partenza, arrivo e km (maggiori di zero).');
@@ -156,12 +177,11 @@ function EditorSheet(props: { editing: NonNullable<Editing>; onClose: () => void
 
   async function remove() {
     if (!window.confirm('Eliminare?')) return;
-    if (editing.kind === 'card') await deleteCard(item.id);
     if (editing.kind === 'route') await deleteRoute(item.id);
     await props.onSaved();
   }
 
-  const title = editing.kind === 'recipient' ? 'Destinatario' : editing.kind === 'card' ? 'Carta' : 'Tratta';
+  const title = editing.kind === 'recipient' ? 'Destinatario' : 'Tratta';
   return (
     <Sheet title={title} onClose={props.onClose}>
       <form class="form" onSubmit={(e) => void save(e)}>
@@ -178,21 +198,6 @@ function EditorSheet(props: { editing: NonNullable<Editing>; onClose: () => void
               </Field>
               <Field label="Località predefinita"><input type="text" value={r.defaultPlace} onInput={(e) => patch({ defaultPlace: val(e) })} /></Field>
               <label class="check"><input type="checkbox" checked={r.active} onChange={(e) => patch({ active: (e.target as HTMLInputElement).checked })} />Attivo</label>
-            </>
-          );
-        })() : null}
-        {editing.kind === 'card' ? (() => {
-          const c = item as Card;
-          return (
-            <>
-              <Field label="Nome"><input type="text" value={c.name} onInput={(e) => patch({ name: val(e) })} /></Field>
-              <Field label="Intestata a">
-                <select value={c.owner} onChange={(e) => patch({ owner: val(e) as Payer })}>
-                  <option value="azienda">Azienda</option>
-                  <option value="personale">Personale</option>
-                </select>
-              </Field>
-              <Field label="Ultime 4 cifre"><input type="text" inputMode="numeric" maxLength={4} value={c.last4} onInput={(e) => patch({ last4: val(e) })} /></Field>
             </>
           );
         })() : null}

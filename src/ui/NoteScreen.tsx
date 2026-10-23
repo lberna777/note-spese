@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { getPhoto } from '../db';
 import { exportFilename, type ExportInput } from '../export/rows';
-import { categoryText, payerText, reimburseLabel } from '../export/rows';
+import { categoryText, payerText, reimburseLabel, TOTAL_LABELS } from '../export/rows';
+import { rasterizeLogo } from '../logo';
 import { monthLabel, shortDate } from '../labels';
 import { formatEuro } from '../money';
 import { shareFile } from '../share';
@@ -29,13 +30,15 @@ export function NoteScreen(props: { data: AppData; recipient: Recipient; month: 
     })();
   }, [totals]);
 
-  const input = (): ExportInput => ({ headerName: data.settings.headerName, recipient, month, totals, cards: data.cards, photos });
+  const input = async (): Promise<ExportInput> => ({
+    headerName: data.settings.headerName, recipient, month, totals, photos, theme: data.theme, logo: await rasterizeLogo(data.theme.logo),
+  });
 
   async function run(kind: 'pdf' | 'xlsx') {
     setBusy(kind);
     setMsg(null);
     try {
-      const blob = kind === 'pdf' ? await (await import('../export/pdf')).buildPdf(input()) : await (await import('../export/xlsx')).buildXlsx(input());
+      const blob = kind === 'pdf' ? await (await import('../export/pdf')).buildPdf(await input()) : await (await import('../export/xlsx')).buildXlsx(await input());
       const res = await shareFile(blob, exportFilename(recipient, month, kind), `Nota spese ${recipient.name}`);
       setMsg(res === 'shared' ? 'File condiviso.' : res === 'downloaded' ? 'File scaricato.' : 'Condivisione annullata.');
     } catch (err) {
@@ -60,9 +63,9 @@ export function NoteScreen(props: { data: AppData; recipient: Recipient; month: 
         </ol>
       )}
       <dl class="totals">
-        <div><dt>Totale complessivo</dt><dd>{formatEuro(totals.totalCents)}</dd></div>
-        <div><dt>Pagato dall'azienda</dt><dd>{formatEuro(totals.paidByCompanyCents)}</dd></div>
-        <div><dt>Anticipato dal consulente</dt><dd>{formatEuro(totals.advancedPersonallyCents)}</dd></div>
+        <div><dt>{TOTAL_LABELS.total}</dt><dd>{formatEuro(totals.totalCents)}</dd></div>
+        <div><dt>{TOTAL_LABELS.paidByCompany}</dt><dd>{formatEuro(totals.paidByCompanyCents)}</dd></div>
+        <div><dt>{TOTAL_LABELS.advanced}</dt><dd>{formatEuro(totals.advancedPersonallyCents)}</dd></div>
         <div class="strong"><dt>{reimburseLabel(recipient)}</dt><dd>{formatEuro(totals.toReimburseCents)}</dd></div>
       </dl>
       <div class="row-buttons">

@@ -10,7 +10,7 @@ export default defineConfig({
     preact(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
+      includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Note spese',
         short_name: 'Note spese',
@@ -30,7 +30,7 @@ export default defineConfig({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 30 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,svg,png,wasm,gz,traineddata}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,wasm,gz,traineddata,woff2}'],
         // I file di public/tesseract finiscono in dist/tesseract e rientrano nei glob (wasm, js, gz).
       },
     }),

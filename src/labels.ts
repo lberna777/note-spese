@@ -13,7 +13,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
 
-export const PAYER_LABELS: Record<Payer, string> = { azienda: 'Azienda', personale: 'Personale' };
+export const PAYER_LABELS: Record<Payer, string> = { azienda: 'Carta aziendale', personale: 'Carta personale' };
 
 const MONTHS = [
   'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',

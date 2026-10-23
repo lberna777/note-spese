@@ -8,7 +8,7 @@ const company: Recipient = { id: 'n', name: 'Azienda', kind: 'azienda', defaultP
 function e(id: string, date: string, recipientId: string, amountCents: number, payer: 'azienda' | 'personale'): Expense {
   return {
     id, date, recipientId, place: '', supplier: '', category: 'altro', amountCents, invoice: false,
-    payer, cardId: null, routeId: null, roundTrip: false, km: null, photoId: null, notes: '', readState: 'manuale',
+    payer, routeId: null, roundTrip: false, km: null, photoId: null, notes: '', readState: 'manuale',
   };
 }
 

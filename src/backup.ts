@@ -1,12 +1,14 @@
 // Backup unico in JSON (foto in base64) e ripristino che sostituisce tutto.
 import { getSettings, putSettings, readEverything, replaceEverything, type DumpData } from './db';
+import { validateTheme } from './theme';
 import { shareFile, type ShareResult } from './share';
-import type { Photo } from './types';
+import type { Expense, Photo } from './types';
 
 const FORMAT = 'note-spese-backup';
-const VERSION = 1;
+const VERSION = 2; // la 1 (con le carte) si importa ancora
 
-interface BackupFile extends Omit<DumpData, 'photos'> {
+interface BackupFile extends Omit<DumpData, 'photos' | 'theme'> {
+  theme?: unknown;
   format: string;
   version: number;
   exportedAt: string;
@@ -61,18 +63,31 @@ export function parseBackup(text: string): DumpData {
   } catch {
     throw new Error('Il file non è un backup valido.');
   }
-  if (f.format !== FORMAT || f.version !== VERSION || !Array.isArray(f.expenses) || !f.settings) {
+  if (f.format !== FORMAT || (f.version !== VERSION && f.version !== 1) || !Array.isArray(f.expenses) || !f.settings) {
     throw new Error('Il file non è un backup di Note spese.');
   }
   const photos: Photo[] = (f.photos ?? []).map((p) => ({ id: p.id, blob: base64ToBlob(p.data, p.type) }));
+  // Versione 1: le carte e il loro numero non esistono più, si scartano insieme a `cardId`.
+  const expenses = f.expenses.map((e) => {
+    const { cardId: _scartato, ...rest } = e as Expense & { cardId?: unknown };
+    return rest as Expense;
+  });
+  let theme = null;
+  if (f.theme != null) {
+    try {
+      theme = validateTheme(f.theme);
+    } catch (err) {
+      throw new Error(`Il backup contiene un tema non valido. ${(err as Error).message}`);
+    }
+  }
   return {
-    expenses: f.expenses,
+    expenses,
     photos,
     recipients: f.recipients ?? [],
-    cards: f.cards ?? [],
     routes: f.routes ?? [],
     settings: f.settings,
     knownSuppliers: f.knownSuppliers ?? [],
+    theme,
   };
 }
 

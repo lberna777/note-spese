@@ -1,7 +1,9 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it } from 'vitest';
-import { closeDb, deleteExpense, DB_NAME, getExpense, getSettings, listCards, listExpenses, listRecipients, putExpense } from './db';
+import { closeDb, deleteExpense, DB_NAME, getExpense, getSettings, listExpenses, listRecipients, putExpense } from './db';
 import { buildSeed } from './seed';
+import { DEFAULT_THEME } from './theme';
+import { deleteTheme, getTheme, putTheme } from './db';
 
 afterEach(async () => {
   await closeDb();
@@ -17,7 +19,6 @@ describe('archivio', () => {
     const n = buildSeed().expenses.length;
     expect((await listExpenses()).length).toBe(n);
     expect(await listRecipients()).toHaveLength(3);
-    expect(await listCards()).toHaveLength(2);
     expect((await getSettings()).headerName).toBe('Mario Rossi');
     // seconda apertura (stessa base dati): niente doppioni, né dopo aver eliminato una spesa
     await deleteExpense('seed-01');
@@ -34,6 +35,19 @@ describe('archivio', () => {
     expect((await getExpense('nuova'))?.amountCents).toBe(1500);
     await deleteExpense('nuova');
     expect(await getExpense('nuova')).toBeUndefined();
+  });
+
+  it('il tema si salva, si rilegge e si cancella; di base è quello neutro', async () => {
+    expect(await getTheme()).toEqual(DEFAULT_THEME);
+    const t = { ...DEFAULT_THEME, companyName: 'Studio Aurora S.r.l.' };
+    await putTheme(t);
+    expect((await getTheme()).companyName).toBe('Studio Aurora S.r.l.');
+    await deleteTheme();
+    expect(await getTheme()).toEqual(DEFAULT_THEME);
+  });
+
+  it('nei dati finti nessuna spesa ha un numero di carta', async () => {
+    for (const e of await listExpenses()) expect(e).not.toHaveProperty('cardId');
   });
 
   it('i dati finti stanno nel mese corrente', async () => {

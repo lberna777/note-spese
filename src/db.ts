@@ -1,12 +1,15 @@
 // Archivio IndexedDB: tutto resta nel telefono.
 import { openDB, type IDBPDatabase } from 'idb';
 import { buildSeed, type SeedData } from './seed';
-import type { Card, Expense, KnownSupplier, Photo, Recipient, Route, Settings } from './types';
+import { DEFAULT_THEME, validateTheme, type Theme } from './theme';
+import type { Expense, KnownSupplier, Photo, Recipient, Route, Settings } from './types';
 
 export const DB_NAME = 'note-spese';
+export const DB_VERSION = 2;
 const SETTINGS_KEY = 'main';
+const THEME_KEY = 'theme';
 
-export const STORES = ['expenses', 'photos', 'recipients', 'cards', 'routes', 'settings', 'knownSuppliers'] as const;
+export const STORES = ['expenses', 'photos', 'recipients', 'routes', 'settings', 'knownSuppliers'] as const;
 export type StoreName = (typeof STORES)[number];
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
@@ -18,11 +21,25 @@ export function newId(): string {
 }
 
 async function open(): Promise<IDBPDatabase> {
-  const db = await openDB(DB_NAME, 1, {
-    upgrade(d) {
-      for (const name of ['expenses', 'photos', 'recipients', 'cards', 'routes']) d.createObjectStore(name, { keyPath: 'id' });
-      d.createObjectStore('settings'); // una sola voce, chiave «main»
-      d.createObjectStore('knownSuppliers', { keyPath: 'name' });
+  const db = await openDB(DB_NAME, DB_VERSION, {
+    async upgrade(d, oldVersion, _newVersion, tx) {
+      if (oldVersion < 1) {
+        for (const name of ['expenses', 'photos', 'recipients', 'routes']) d.createObjectStore(name, { keyPath: 'id' });
+        d.createObjectStore('settings'); // voci: «main» (impostazioni) e «theme» (tema grafico)
+        d.createObjectStore('knownSuppliers', { keyPath: 'name' });
+      } else if (oldVersion < 2) {
+        // v1 → v2: via le carte e il loro numero; le spese tengono solo «pagato da».
+        if (d.objectStoreNames.contains('cards' as never)) d.deleteObjectStore('cards');
+        let cursor = await tx.objectStore('expenses').openCursor();
+        while (cursor) {
+          const e = { ...cursor.value } as Record<string, unknown>;
+          if ('cardId' in e) {
+            delete e.cardId;
+            await cursor.update(e);
+          }
+          cursor = await cursor.continue();
+        }
+      }
     },
   });
   // Dati finti solo alla prima apertura: la presenza delle impostazioni è il segnale.
@@ -43,13 +60,13 @@ async function open(): Promise<IDBPDatabase> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function writeAll(tx: any, s: SeedData): Promise<void> {
+async function writeAll(tx: any, s: SeedData & { theme?: Theme | null }): Promise<void> {
   for (const r of s.recipients) await tx.objectStore('recipients').put(r);
-  for (const c of s.cards) await tx.objectStore('cards').put(c);
   for (const r of s.routes) await tx.objectStore('routes').put(r);
   for (const e of s.expenses) await tx.objectStore('expenses').put(e);
   for (const k of s.knownSuppliers) await tx.objectStore('knownSuppliers').put(k);
   await tx.objectStore('settings').put(s.settings, SETTINGS_KEY);
+  if (s.theme) await tx.objectStore('settings').put(s.theme, THEME_KEY);
 }
 
 export function getDb(): Promise<IDBPDatabase> {
@@ -93,21 +110,12 @@ export async function deletePhoto(id: string): Promise<void> {
   await (await getDb()).delete('photos', id);
 }
 
-// --- destinatari, carte, tratte ---
+// --- destinatari, tratte ---
 export async function listRecipients(): Promise<Recipient[]> {
   return (await getDb()).getAll('recipients');
 }
 export async function putRecipient(r: Recipient): Promise<void> {
   await (await getDb()).put('recipients', r);
-}
-export async function listCards(): Promise<Card[]> {
-  return (await getDb()).getAll('cards');
-}
-export async function putCard(c: Card): Promise<void> {
-  await (await getDb()).put('cards', c);
-}
-export async function deleteCard(id: string): Promise<void> {
-  await (await getDb()).delete('cards', id);
 }
 export async function listRoutes(): Promise<Route[]> {
   return (await getDb()).getAll('routes');
@@ -127,6 +135,23 @@ export async function putSettings(s: Settings): Promise<void> {
   await (await getDb()).put('settings', s, SETTINGS_KEY);
 }
 
+// --- tema grafico (solo sul telefono) ---
+export async function getTheme(): Promise<Theme> {
+  const raw = await (await getDb()).get('settings', THEME_KEY);
+  if (raw === undefined) return DEFAULT_THEME;
+  try {
+    return validateTheme(raw);
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
+export async function putTheme(t: Theme): Promise<void> {
+  await (await getDb()).put('settings', t, THEME_KEY);
+}
+export async function deleteTheme(): Promise<void> {
+  await (await getDb()).delete('settings', THEME_KEY);
+}
+
 // --- fornitori noti ---
 export async function listKnownSuppliers(): Promise<KnownSupplier[]> {
   return (await getDb()).getAll('knownSuppliers');
@@ -140,10 +165,10 @@ export interface DumpData {
   expenses: Expense[];
   photos: Photo[];
   recipients: Recipient[];
-  cards: Card[];
   routes: Route[];
   settings: Settings;
   knownSuppliers: KnownSupplier[];
+  theme: Theme | null; // null = tema predefinito
 }
 
 export async function readEverything(): Promise<DumpData> {
@@ -152,10 +177,10 @@ export async function readEverything(): Promise<DumpData> {
     expenses: await db.getAll('expenses'),
     photos: await db.getAll('photos'),
     recipients: await db.getAll('recipients'),
-    cards: await db.getAll('cards'),
     routes: await db.getAll('routes'),
     settings: (await db.get('settings', SETTINGS_KEY)) as Settings,
     knownSuppliers: await db.getAll('knownSuppliers'),
+    theme: ((await db.get('settings', THEME_KEY)) as Theme | undefined) ?? null,
   };
 }
 

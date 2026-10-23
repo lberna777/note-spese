@@ -217,38 +217,6 @@ export function findInvoice(text: string): Field<boolean> {
   return field(false, 'bassa');
 }
 
-// ---------- Carta e pagato da ----------
-
-const CARD_RE = /[*Xx•#]{2,}[\s*Xx•#\-]*?([\dOoB]{4})(?![\dOoB])/g;
-
-/** Ultime 4 cifre della carta, se stampate dopo asterischi o X. */
-export function findCardLast4(text: string): string | undefined {
-  for (const m of text.matchAll(CARD_RE)) {
-    const digits = m[1].replace(/[Oo]/g, '0').replace(/B/g, '8');
-    if (/^\d{4}$/.test(digits)) return digits;
-  }
-  return undefined;
-}
-
-export function findPayment(
-  text: string,
-  cards: ParseContext['cards'],
-): Pick<ReceiptDraft, 'cardId' | 'payer'> {
-  const last4 = findCardLast4(text);
-  if (last4) {
-    const card = cards.find((c) => c.last4 === last4);
-    if (card) return { cardId: field(card.id, 'alta'), payer: field(card.owner, 'alta') };
-    return {}; // carta letta ma sconosciuta: si sceglie a mano
-  }
-  const cash = splitLines(text).some((line) => {
-    if (!/CONTANT[EI]/.test(normalizeForKeywords(line))) return false;
-    const amounts = findAmounts(line);
-    return !(amounts.length > 0 && amounts.every((a) => a === 0)); // «CONTANTE 0,00» non conta
-  });
-  if (cash) return { cardId: field(null, 'alta'), payer: field<'personale'>('personale', 'alta') };
-  return {};
-}
-
 // ---------- Tipologia ----------
 
 const KEYWORDS: Array<[Category, RegExp]> = [
@@ -296,7 +264,6 @@ export function parseReceipt(text: string, ctx: ParseContext): ReceiptDraft {
   const place = findPlace(text);
   if (place) draft.place = place;
   draft.invoice = findInvoice(text);
-  Object.assign(draft, findPayment(text, ctx.cards));
 
   const known = matchKnownSupplier(supplier?.value, ctx.knownSuppliers);
   if (known) {
