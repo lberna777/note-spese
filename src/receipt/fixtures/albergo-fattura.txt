@@ -1,0 +1,15 @@
+HOTEL BELLAVISTA S.P.A.
+Viale Immaginario 100
+20121 MILANO MI
+P. IVA 09876543210
+
+FATTURA ELETTRONICA n. 128/2026
+Data 22/09/2026
+Destinatario: Studio Aurora S.r.l. - P.IVA 01234567890
+
+Pernottamento 1 notte       110,00
+Imposta di soggiorno          5,00
+Imponibile                  104,55
+IVA 10%                      10,45
+TOTALE DOCUMENTO            115,00
+PAGATO CON CARTA ************1937
