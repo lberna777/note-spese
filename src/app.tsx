@@ -5,6 +5,7 @@ import type { Expense, ReceiptDraft, Recipient } from './types';
 import { BrandBar } from './ui/BrandBar';
 import { AdvancesScreen } from './ui/AdvancesScreen';
 import { ExpenseForm } from './ui/ExpenseForm';
+import { Segmented } from './ui/common';
 import { MonthScreen } from './ui/MonthScreen';
 import { NoteScreen } from './ui/NoteScreen';
 import { ReadingScreen } from './ui/ReadingScreen';
@@ -14,6 +15,7 @@ import './ui/fonts.css';
 import './ui/styles.css';
 
 type Tab = 'mese' | 'anticipi' | 'impostazioni';
+const TAB_LABELS: Record<Tab, string> = { mese: 'Mese', anticipi: 'Anticipi', impostazioni: 'Impostazioni' };
 type Overlay =
   | { kind: 'reading'; file: File }
   | { kind: 'form'; existing?: Expense; photoId?: string | null; draft?: ReceiptDraft; warning?: string | null }
@@ -25,6 +27,7 @@ export function App() {
   const [tab, setTab] = useState<Tab>('mese');
   const [month, setMonth] = useState(currentMonth());
   const [overlay, setOverlay] = useState<Overlay>(null);
+  const [compact, setCompact] = useState(false);
 
   // Il tema (colori, caratteri, colore della barra del browser) si applica appena i dati sono pronti.
   const theme = data?.theme;
@@ -32,27 +35,74 @@ export function App() {
     if (theme) applyTheme(theme);
   }, [theme]);
 
-  const screen = (() => {
-    if (error) return <div class="screen center"><p class="banner error">Errore nell’archivio: {error}</p></div>;
-    if (!data) return <div class="screen center"><p>Carico…</p></div>;
+  // Titolo piccolo al centro della barra: compare quando il titolo grande esce dallo schermo.
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 32);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
-    const defaultDate = month === currentMonth() ? todayIso() : `${month}-01`;
-    const close = async () => {
-      setOverlay(null);
-      await reload();
-    };
+  const goTab = (t: Tab) => {
+    setTab(t);
+    window.scrollTo(0, 0);
+  };
 
-    if (overlay?.kind === 'reading') {
-      return (
+  if (error) return <div class="screen center"><p class="group alert-box">Errore nell’archivio: {error}</p></div>;
+  if (!data) return <div class="screen center"><p>Carico…</p></div>;
+
+  const defaultDate = month === currentMonth() ? todayIso() : `${month}-01`;
+  const close = async () => {
+    setOverlay(null);
+    await reload();
+  };
+  const title = TAB_LABELS[tab];
+
+  // La schermata resta sotto: il foglio le sale sopra e, chiudendolo, si ritrova lo scorrimento di prima.
+  return (
+    <>
+      <div class="app" aria-hidden={overlay ? true : undefined}>
+        <header class={`app-header${compact ? ' compact' : ''}`}>
+          <div class="bar-row">
+            <div class="bar-brand">{theme ? <BrandBar theme={theme} /> : null}</div>
+            <div class="bar-title" aria-hidden="true">{title}</div>
+          </div>
+          <div class="seg-row">
+            <Segmented
+              nav
+              label="Sezioni"
+              value={tab}
+              onChange={goTab}
+              options={(Object.keys(TAB_LABELS) as Tab[]).map((t) => ({ value: t, label: TAB_LABELS[t] }))}
+            />
+          </div>
+        </header>
+        <main>
+          <h1 class="large-title">{title}</h1>
+          {tab === 'mese' ? (
+            <MonthScreen
+              data={data}
+              month={month}
+              onMonth={setMonth}
+              onPhoto={(file) => setOverlay({ kind: 'reading', file })}
+              onManual={() => setOverlay({ kind: 'form' })}
+              onEdit={(existing) => setOverlay({ kind: 'form', existing })}
+              onNote={(recipient) => setOverlay({ kind: 'note', recipient })}
+              onGoSettings={() => goTab('impostazioni')}
+            />
+          ) : null}
+          {tab === 'anticipi' ? <AdvancesScreen data={data} month={month} onMonth={setMonth} /> : null}
+          {tab === 'impostazioni' ? <SettingsScreen data={data} reload={reload} /> : null}
+        </main>
+      </div>
+      {overlay?.kind === 'reading' ? (
         <ReadingScreen
           file={overlay.file}
           data={data}
           onDone={(r) => setOverlay({ kind: 'form', photoId: r.photoId, draft: r.draft, warning: r.warning })}
         />
-      );
-    }
-    if (overlay?.kind === 'form') {
-      return (
+      ) : null}
+      {overlay?.kind === 'form' ? (
         <ExpenseForm
           key={overlay.existing?.id ?? overlay.photoId ?? 'nuova'}
           data={data}
@@ -64,45 +114,10 @@ export function App() {
           onSaved={() => void close()}
           onCancel={() => void close()}
         />
-      );
-    }
-    if (overlay?.kind === 'note') {
-      return <NoteScreen data={data} recipient={overlay.recipient} month={month} onClose={() => void close()} />;
-    }
-
-    return (
-      <div class="app">
-        <main>
-          {tab === 'mese' ? (
-            <MonthScreen
-              data={data}
-              month={month}
-              onMonth={setMonth}
-              onPhoto={(file) => setOverlay({ kind: 'reading', file })}
-              onManual={() => setOverlay({ kind: 'form' })}
-              onEdit={(existing) => setOverlay({ kind: 'form', existing })}
-              onNote={(recipient) => setOverlay({ kind: 'note', recipient })}
-              onGoSettings={() => setTab('impostazioni')}
-            />
-          ) : null}
-          {tab === 'anticipi' ? <AdvancesScreen data={data} month={month} onMonth={setMonth} /> : null}
-          {tab === 'impostazioni' ? <SettingsScreen data={data} reload={reload} /> : null}
-        </main>
-        <nav class="tabs" aria-label="Sezioni">
-          {(['mese', 'anticipi', 'impostazioni'] as Tab[]).map((t) => (
-            <button key={t} type="button" class={tab === t ? 'active' : ''} aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>
-              {t === 'mese' ? 'Mese' : t === 'anticipi' ? 'Anticipi' : 'Impostazioni'}
-            </button>
-          ))}
-        </nav>
-      </div>
-    );
-  })();
-
-  return (
-    <>
-      {theme ? <BrandBar theme={theme} /> : null}
-      {screen}
+      ) : null}
+      {overlay?.kind === 'note' ? (
+        <NoteScreen data={data} recipient={overlay.recipient} month={month} onClose={() => void close()} />
+      ) : null}
     </>
   );
 }

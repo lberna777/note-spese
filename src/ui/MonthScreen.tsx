@@ -1,11 +1,12 @@
 import { useRef, useState } from 'preact/hooks';
-import { categoryText, payerText } from '../export/rows';
+import { categoryText, payerText, reimburseLabel } from '../export/rows';
 import { currentDevice, dismissIosHint, iosHintDismissed, shouldShowIosHint } from '../ios';
 import { shortDate } from '../labels';
 import { formatEuro } from '../money';
 import { monthTotals } from '../totals';
 import type { Expense, Recipient } from '../types';
-import { MonthPicker } from './common';
+import { Group, MonthPicker } from './common';
+import { IconCamera, IconChevronRight, IconClose, IconPencil, IconPhotos, IconWarning } from './icons';
 import type { AppData } from './useData';
 
 const DAY = 24 * 3600 * 1000;
@@ -40,55 +41,77 @@ export function MonthScreen(props: {
   };
 
   return (
-    <div class="page">
+    <div class="page with-toolbar">
       {iosHint ? (
-        <div class="banner ios-hint" role="note">
-          <span>Per usarla come un’app e non perdere i dati: tocca Condividi, poi «Aggiungi alla schermata Home».</span>
-          <button type="button" class="btn ghost" aria-label="Chiudi il suggerimento" onClick={() => { dismissIosHint(); setIosHint(false); }}>✕</button>
-        </div>
+        <Group>
+          <div class="row two-line" role="note">
+            <span class="grow secondary-text">Per usarla come un’app e non perdere i dati: tocca Condividi, poi «Aggiungi alla schermata Home».</span>
+            <button type="button" class="icon-btn" aria-label="Chiudi il suggerimento" onClick={() => { dismissIosHint(); setIosHint(false); }}><IconClose /></button>
+          </div>
+        </Group>
       ) : null}
       {backupOverdue(data.settings.lastBackupAt) ? (
-        <button type="button" class="banner warn-banner link" onClick={props.onGoSettings}>
-          {data.settings.lastBackupAt ? 'L’ultimo backup ha più di 30 giorni.' : 'Non hai ancora fatto un backup.'} Tocca per esportarlo.
-        </button>
+        <Group>
+          <button type="button" class="row two-line tap" onClick={props.onGoSettings}>
+            <IconWarning class="warn-icon" />
+            <span class="grow">
+              <span class="primary-text">{data.settings.lastBackupAt ? 'L’ultimo backup ha più di 30 giorni.' : 'Non hai ancora fatto un backup.'}</span>
+              <span class="secondary-text">Tocca per esportarlo.</span>
+            </span>
+            <IconChevronRight class="chev" />
+          </button>
+        </Group>
       ) : null}
       <MonthPicker month={month} onChange={props.onMonth} />
 
+      {groups.length === 0 ? (
+        <Group><div class="row empty">Nessuna spesa in questo mese.</div></Group>
+      ) : null}
+      {groups.map(({ r, t }) => (
+        <Group title={r.name} key={r.id}>
+          {t.rows.map((e) => (
+            <button type="button" class="row two-line tap" key={e.id} onClick={() => props.onEdit(e)}>
+              <span class="grow">
+                <span class="primary-text">{e.supplier || categoryText(e)}</span>
+                <span class="secondary-text">{categoryText(e)} · {payerText(e)}{e.invoice ? ' · fattura' : ''}</span>
+              </span>
+              <span class="right-col">
+                <span class="amount">{formatEuro(e.amountCents)}</span>
+                <span class="date-text">{shortDate(e.date)}</span>
+              </span>
+              <IconChevronRight class="chev" />
+            </button>
+          ))}
+          <div class="row">
+            <span class="grow">Totale</span>
+            <span class="amount-plain">{formatEuro(t.totalCents)}</span>
+          </div>
+          <div class="row">
+            <span class="grow">{reimburseLabel(r)}</span>
+            <span class="amount">{formatEuro(t.toReimburseCents)}</span>
+          </div>
+          <button type="button" class="row tap link-row" onClick={() => props.onNote(r)}>
+            <span class="grow">Nota spese</span>
+            <IconChevronRight class="chev" />
+          </button>
+        </Group>
+      ))}
+
       <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={picked} data-testid="camera-input" />
       <input ref={gallery} type="file" accept="image/*" hidden onChange={picked} data-testid="gallery-input" />
-      <button type="button" class="btn primary big" onClick={() => camera.current?.click()}>Fotografa scontrino</button>
-      <div class="row-buttons">
-        <button type="button" class="btn big" onClick={() => gallery.current?.click()}>Scegli dalla galleria</button>
-        <button type="button" class="btn big" onClick={props.onManual}>Spesa senza scontrino</button>
+      <div class="toolbar" role="toolbar" aria-label="Aggiungi una spesa">
+        <button type="button" class="tool" onClick={() => gallery.current?.click()}>
+          <IconPhotos />
+          <span>Galleria</span>
+        </button>
+        <button type="button" class="shutter" aria-label="Fotografa scontrino" onClick={() => camera.current?.click()}>
+          <IconCamera size={28} />
+        </button>
+        <button type="button" class="tool" onClick={props.onManual}>
+          <IconPencil />
+          <span>Senza scontrino</span>
+        </button>
       </div>
-
-      {groups.length === 0 ? <p class="muted">Nessuna spesa in questo mese.</p> : null}
-      {groups.map(({ r, t }) => (
-        <section class="group" key={r.id}>
-          <header>
-            <h2>{r.name}</h2>
-            <div class="group-total">{formatEuro(t.totalCents)}</div>
-          </header>
-          <ul class="expenses">
-            {t.rows.map((e) => (
-              <li key={e.id}>
-                <button type="button" class="expense" onClick={() => props.onEdit(e)}>
-                  <span class="date">{shortDate(e.date)}</span>
-                  <span class="grow">
-                    {e.supplier || categoryText(e)}
-                    <small>{categoryText(e)} · {payerText(e)}{e.invoice ? ' · fattura' : ''}</small>
-                  </span>
-                  <strong>{formatEuro(e.amountCents)}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <p class="sub">
-            {r.kind === 'cliente' ? 'Da rimborsare' : 'Da rimborsare al consulente'}: <strong>{formatEuro(t.toReimburseCents)}</strong>
-          </p>
-          <button type="button" class="btn" onClick={() => props.onNote(r)}>Nota spese</button>
-        </section>
-      ))}
     </div>
   );
 }

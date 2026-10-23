@@ -51,8 +51,8 @@ export function ReadingScreen(props: { file: File; data: AppData; onDone: (r: Re
   }, [props.file]);
 
   return (
-    <div class="screen center">
-      <h1>Lettura</h1>
+    <div class="screen center" role="status">
+      <h1 class="reading-title">Lettura</h1>
       <p>{phase}</p>
       <progress max={1} value={progress} aria-label="Avanzamento della lettura" />
       <p class="hint">{Math.round(progress * 100)}%</p>

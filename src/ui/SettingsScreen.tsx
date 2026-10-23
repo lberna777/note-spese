@@ -5,7 +5,8 @@ import { kindLabel } from '../labels';
 import { formatRatePerKm, parseRatePerKm } from '../money';
 import { isDefaultTheme, parseThemeText, type Theme } from '../theme';
 import type { Recipient, RecipientKind, Route } from '../types';
-import { Field, Sheet, val } from './common';
+import { Field, Group, Sheet, Switch, val } from './common';
+import { IconChevronRight, IconPlus } from './icons';
 import type { AppData } from './useData';
 
 type Editing =
@@ -78,80 +79,83 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
 
   return (
     <div class="page">
-      <h1>Impostazioni</h1>
       <p class="demo-tag">Demo con dati finti</p>
 
-      <section class="group">
-        <h2>Destinatari</h2>
-        <ul class="expenses">
-          {data.recipients.map((r) => (
-            <li key={r.id}>
-              <button type="button" class="expense" onClick={() => setEditing({ kind: 'recipient', item: r })}>
-                <span class="grow">{r.name}<small>{kindLabel(r.kind, data.theme)} · {r.defaultPlace || 'senza località'}{r.active ? '' : ' · non attivo'}</small></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button type="button" class="btn" onClick={() => setEditing({ kind: 'recipient', item: { id: newId(), name: '', kind: 'cliente', defaultPlace: '', active: true } })}>Aggiungi destinatario</button>
-      </section>
+      <Group title="Destinatari">
+        {data.recipients.map((r) => (
+          <button type="button" class="row two-line tap" key={r.id} onClick={() => setEditing({ kind: 'recipient', item: r })}>
+            <span class="grow">
+              <span class="primary-text">{r.name}</span>
+              <span class="secondary-text">{kindLabel(r.kind, data.theme)} · {r.defaultPlace || 'senza località'}{r.active ? '' : ' · non attivo'}</span>
+            </span>
+            <IconChevronRight class="chev" />
+          </button>
+        ))}
+        <button type="button" class="row tap link-row" onClick={() => setEditing({ kind: 'recipient', item: { id: newId(), name: '', kind: 'cliente', defaultPlace: '', active: true } })}>
+          <IconPlus size={20} /><span class="grow">Aggiungi destinatario</span>
+        </button>
+      </Group>
 
-      <section class="group">
-        <h2>Tratte in auto</h2>
-        <ul class="expenses">
-          {data.routes.map((r) => (
-            <li key={r.id}>
-              <button type="button" class="expense" onClick={() => setEditing({ kind: 'route', item: r })}>
-                <span class="grow">{r.from} – {r.to}<small>{r.km} km (sola andata)</small></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button type="button" class="btn" onClick={() => setEditing({ kind: 'route', item: { id: newId(), from: '', to: '', km: 0 } })}>Aggiungi tratta</button>
-      </section>
+      <Group title="Tratte in auto">
+        {data.routes.map((r) => (
+          <button type="button" class="row two-line tap" key={r.id} onClick={() => setEditing({ kind: 'route', item: r })}>
+            <span class="grow">
+              <span class="primary-text">{r.from} – {r.to}</span>
+              <span class="secondary-text">{r.km} km (sola andata)</span>
+            </span>
+            <IconChevronRight class="chev" />
+          </button>
+        ))}
+        <button type="button" class="row tap link-row" onClick={() => setEditing({ kind: 'route', item: { id: newId(), from: '', to: '', km: 0 } })}>
+          <IconPlus size={20} /><span class="grow">Aggiungi tratta</span>
+        </button>
+      </Group>
 
-      <form class="group form" onSubmit={(e) => void saveGeneral(e)}>
-        <h2>I tuoi dati e il rimborso auto</h2>
-        <Field label="Il tuo nome" hint="Compare nella nota spese, alla voce «Consulente».">
-          <input type="text" value={header} onInput={(e) => setHeader(val(e))} />
-        </Field>
-        <Field label="Rimborso auto (€ per km)" hint="Quanto ti viene rimborsato per ogni km fatto in auto, per esempio 0,5000.">
-          <input type="text" inputMode="decimal" value={rate} onInput={(e) => setRate(val(e))} />
-        </Field>
-        <button type="submit" class="btn primary">Salva</button>
+      <form onSubmit={(e) => void saveGeneral(e)}>
+        <Group title="I tuoi dati e il rimborso auto" footer="Il nome compare nella nota spese, alla voce «Consulente». Il rimborso è quanto ti viene riconosciuto per ogni km fatto in auto, per esempio 0,5000.">
+          <Field label="Il tuo nome">
+            <input type="text" value={header} onInput={(e) => setHeader(val(e))} />
+          </Field>
+          <Field label="Rimborso auto (€ per km)">
+            <input type="text" inputMode="decimal" value={rate} onInput={(e) => setRate(val(e))} />
+          </Field>
+          <button type="submit" class="row tap link-row strong-text center">Salva</button>
+        </Group>
       </form>
 
-      <section class="group">
-        <h2>Aspetto</h2>
-        <div class="theme-preview" data-testid="theme-preview">
-          {data.theme.logo ? <img src={data.theme.logo} alt="Logo del tema" class="theme-logo" /> : null}
-          <strong>{data.theme.companyName || 'Tema predefinito'}</strong>
-          <span class="swatches" aria-label="Colori del tema">
+      <Group title="Aspetto" footer="Il tema (nome, logo e colori dell’azienda) si importa da un file .json e resta solo nel telefono.">
+        <div class="row two-line" data-testid="theme-preview">
+          {data.theme.logo ? <span class="brand-chip"><img src={data.theme.logo} alt="Logo del tema" class="theme-logo" /></span> : null}
+          <strong class="grow">{data.theme.companyName || 'Tema predefinito'}</strong>
+          <span class="swatches" role="img" aria-label="Colori del tema">
             {Object.entries(data.theme.colors).map(([k, c]) => (
               <i key={k} class="swatch" style={{ background: c }} title={`${k} ${c}`} />
             ))}
           </span>
         </div>
-        <p class="muted">Il tema (nome, logo e colori dell’azienda) si importa da un file .json e resta solo nel telefono.</p>
-        <label class="btn file-btn">
-          Importa tema
+        <label class="row tap link-row">
+          <span class="grow">Importa tema</span>
           <input type="file" accept="application/json,.json" hidden onChange={(e) => void doImportTheme(e)} />
         </label>
-        <button type="button" class="btn" disabled={isDefaultTheme(data.theme)} onClick={() => void resetTheme()}>Torna al tema predefinito</button>
-      </section>
+        <button type="button" class="row tap link-row" disabled={isDefaultTheme(data.theme)} onClick={() => void resetTheme()}>
+          <span class="grow">Torna al tema predefinito</span>
+        </button>
+      </Group>
 
-      <section class="group">
-        <h2>Backup</h2>
-        <p class="muted">
-          {data.settings.lastBackupAt ? `Ultimo backup: ${new Date(data.settings.lastBackupAt).toLocaleDateString('it-IT')}.` : 'Nessun backup ancora.'} Il file contiene dati e foto e resta dove lo salvi tu.
-        </p>
-        <button type="button" class="btn" onClick={() => void doExport()}>Esporta backup</button>
-        <label class="btn file-btn">
-          Importa backup
+      <Group title="Backup" footer="Il file contiene dati e foto e resta dove lo salvi tu.">
+        <div class="row">
+          <span class="grow">{data.settings.lastBackupAt ? `Ultimo backup: ${new Date(data.settings.lastBackupAt).toLocaleDateString('it-IT')}.` : 'Nessun backup ancora.'}</span>
+        </div>
+        <button type="button" class="row tap link-row" onClick={() => void doExport()}>
+          <span class="grow">Esporta backup</span>
+        </button>
+        <label class="row tap link-row">
+          <span class="grow">Importa backup</span>
           <input type="file" accept="application/json,.json" hidden onChange={(e) => void doImport(e)} />
         </label>
-      </section>
+      </Group>
 
-      {msg ? <div class="banner" role="status">{msg}</div> : null}
+      {msg ? <Group><div class="row" role="status">{msg}</div></Group> : null}
     </div>
   );
 }
@@ -184,38 +188,37 @@ function EditorSheet(props: { editing: NonNullable<Editing>; theme: Theme; onClo
 
   const title = editing.kind === 'recipient' ? 'Destinatario' : 'Tratta';
   return (
-    <Sheet title={title} onClose={props.onClose}>
-      <form class="form" onSubmit={(e) => void save(e)}>
-        {editing.kind === 'recipient' ? (() => {
-          const r = item as Recipient;
-          return (
-            <>
-              <Field label="Nome"><input type="text" value={r.name} onInput={(e) => patch({ name: val(e) })} /></Field>
-              <Field label="Tipo">
-                <select value={r.kind} onChange={(e) => patch({ kind: val(e) as RecipientKind })}>
-                  <option value="cliente">{kindLabel('cliente', props.theme)}</option>
-                  <option value="azienda">{kindLabel('azienda', props.theme)}</option>
-                </select>
-              </Field>
-              <Field label="Località predefinita"><input type="text" value={r.defaultPlace} onInput={(e) => patch({ defaultPlace: val(e) })} /></Field>
-              <label class="check"><input type="checkbox" checked={r.active} onChange={(e) => patch({ active: (e.target as HTMLInputElement).checked })} />Attivo</label>
-            </>
-          );
-        })() : null}
-        {editing.kind === 'route' ? (() => {
-          const r = item as Route;
-          return (
-            <>
-              <Field label="Da"><input type="text" value={r.from} onInput={(e) => patch({ from: val(e) })} /></Field>
-              <Field label="A"><input type="text" value={r.to} onInput={(e) => patch({ to: val(e) })} /></Field>
-              <Field label="Km (sola andata)"><input type="number" min={1} value={r.km || ''} onInput={(e) => patch({ km: Number(val(e)) })} /></Field>
-            </>
-          );
-        })() : null}
-        {err ? <div class="banner error" role="alert">{err}</div> : null}
-        <button type="submit" class="btn primary big">Salva</button>
-        {editing.kind !== 'recipient' ? <button type="button" class="btn danger big" onClick={() => void remove()}>Elimina</button> : null}
-      </form>
+    <Sheet title={title} onClose={props.onClose} onSubmit={(e) => void save(e)}>
+      {err ? <Group><div class="row error-text" role="alert">{err}</div></Group> : null}
+      {editing.kind === 'recipient' ? (() => {
+        const r = item as Recipient;
+        return (
+          <Group>
+            <Field label="Nome"><input type="text" value={r.name} onInput={(e) => patch({ name: val(e) })} /></Field>
+            <Field label="Tipo" select>
+              <select value={r.kind} onChange={(e) => patch({ kind: val(e) as RecipientKind })}>
+                <option value="cliente">{kindLabel('cliente', props.theme)}</option>
+                <option value="azienda">{kindLabel('azienda', props.theme)}</option>
+              </select>
+            </Field>
+            <Field label="Località predefinita"><input type="text" value={r.defaultPlace} onInput={(e) => patch({ defaultPlace: val(e) })} /></Field>
+            <Switch label="Attivo" checked={r.active} onChange={(v) => patch({ active: v })} />
+          </Group>
+        );
+      })() : null}
+      {editing.kind === 'route' ? (() => {
+        const r = item as Route;
+        return (
+          <Group>
+            <Field label="Da"><input type="text" value={r.from} onInput={(e) => patch({ from: val(e) })} /></Field>
+            <Field label="A"><input type="text" value={r.to} onInput={(e) => patch({ to: val(e) })} /></Field>
+            <Field label="Km (sola andata)"><input type="number" inputMode="numeric" min={1} value={r.km || ''} onInput={(e) => patch({ km: Number(val(e)) })} /></Field>
+          </Group>
+        );
+      })() : null}
+      {editing.kind !== 'recipient' ? (
+        <Group><button type="button" class="row tap destructive center" onClick={() => void remove()}>Elimina tratta</button></Group>
+      ) : null}
     </Sheet>
   );
 }

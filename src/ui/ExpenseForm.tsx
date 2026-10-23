@@ -4,7 +4,8 @@ import { CATEGORIES, CATEGORY_LABELS, PAYER_LABELS } from '../labels';
 import { suggestPayer } from '../payer';
 import { autoAmountCents, autoKm, formatDecimal, formatEuro, parseAmount } from '../money';
 import type { Category, Expense, Payer, ReadState, ReceiptDraft } from '../types';
-import { Field, Sheet, usePhotoUrl, val } from './common';
+import { Field, Group, Segmented, Sheet, Switch, usePhotoUrl, val } from './common';
+import { IconChevronRight } from './icons';
 import type { AppData } from './useData';
 
 type ReadField = 'date' | 'amountCents' | 'supplier' | 'place' | 'category' | 'invoice';
@@ -148,90 +149,92 @@ export function ExpenseForm(props: FormProps) {
 
   const title = existing ? 'Modifica spesa' : photoId ? 'Conferma spesa' : 'Spesa senza scontrino';
 
-  return (
-    <Sheet title={title} onClose={() => void cancel()}>
-      <form onSubmit={(e) => void save(e)} class="form">
-        {props.warning ? <div class="banner warn-banner" role="alert">{props.warning}</div> : null}
-        {photoUrl ? (
-          <>
-            <button type="button" class="photo-thumb" onClick={() => setZoom(true)} aria-label="Ingrandisci la foto">
-              <img src={photoUrl} alt="Foto dello scontrino" />
-              <span>Tocca per ingrandire</span>
-            </button>
-            {zoom ? (
-              <div class="zoom" onClick={() => setZoom(false)} role="dialog" aria-label="Foto ingrandita">
-                <img src={photoUrl} alt="Foto dello scontrino ingrandita" />
-              </div>
-            ) : null}
-          </>
-        ) : null}
+  const payerOptions = (Object.keys(PAYER_LABELS) as Payer[]).map((p) => ({ value: p, label: PAYER_LABELS[p] }));
 
+  return (
+    <Sheet title={title} onClose={() => void cancel()} onSubmit={(e) => void save(e)}>
+      {props.warning ? <Group><div class="row two-line warn" role="alert">{props.warning}</div></Group> : null}
+      {error ? <Group><div class="row two-line error-text" role="alert">{error}</div></Group> : null}
+      {photoUrl ? (
+        <>
+          <Group>
+            <button type="button" class="row two-line tap" onClick={() => setZoom(true)} aria-label="Ingrandisci la foto">
+              <img class="photo-thumb" src={photoUrl} alt="Foto dello scontrino" />
+              <span class="grow secondary-text">Tocca per ingrandire</span>
+              <IconChevronRight class="chev" />
+            </button>
+          </Group>
+          {zoom ? (
+            <div class="zoom" onClick={() => setZoom(false)} role="dialog" aria-label="Foto ingrandita">
+              <img src={photoUrl} alt="Foto dello scontrino ingrandita" />
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      <Group>
         <Field label="Data" warn={warn('date')}>
           <input type="date" required value={date} onInput={(e) => setDate(val(e))} />
         </Field>
-        <Field label="Destinatario">
+        <Field label="Destinatario" select>
           <select value={recipientId} onChange={(e) => chooseRecipient(val(e))}>
             {data.recipients.filter((r) => r.active || r.id === recipientId).map((r) => (
               <option value={r.id} key={r.id}>{r.name}</option>
             ))}
           </select>
         </Field>
-        <Field label="Tipologia" warn={warn('category')}>
+        <Field label="Tipologia" warn={warn('category')} select>
           <select value={category} onChange={(e) => setCategory(val(e) as Category)}>
             {CATEGORIES.map((c) => <option value={c} key={c}>{CATEGORY_LABELS[c]}</option>)}
           </select>
         </Field>
+      </Group>
 
-        {isAuto ? (
-          <>
-            <Field label="Tratta" hint={data.routes.length ? undefined : 'Nessuna tratta: aggiungila in Impostazioni.'}>
-              <select value={routeId} onChange={(e) => setRouteId(val(e))}>
-                {data.routes.map((r) => <option value={r.id} key={r.id}>{r.from} – {r.to} ({r.km} km)</option>)}
-              </select>
-            </Field>
-            <label class="check">
-              <input type="checkbox" checked={roundTrip} onChange={(e) => setRoundTrip((e.target as HTMLInputElement).checked)} />
-              Andata e ritorno
-            </label>
-            <div class="calc">
-              <div><span>Km</span><strong>{km ?? '–'}</strong></div>
-              <div><span>Importo</span><strong>{autoCents != null ? formatEuro(autoCents) : '–'}</strong></div>
-            </div>
-          </>
-        ) : (
+      {isAuto ? (
+        <Group footer={data.routes.length ? undefined : 'Nessuna tratta: aggiungila in Impostazioni.'}>
+          <Field label="Tratta" select>
+            <select value={routeId} onChange={(e) => setRouteId(val(e))}>
+              {data.routes.map((r) => <option value={r.id} key={r.id}>{r.from} – {r.to} ({r.km} km)</option>)}
+            </select>
+          </Field>
+          <Switch label="Andata e ritorno" checked={roundTrip} onChange={setRoundTrip} />
+          <div class="row"><span class="grow">Km</span><span class="amount-plain">{km ?? '–'}</span></div>
+          <div class="row"><span class="grow">Importo</span><span class="amount">{autoCents != null ? formatEuro(autoCents) : '–'}</span></div>
+        </Group>
+      ) : (
+        <Group>
           <Field label="Importo (€)" warn={warn('amountCents')}>
             <input type="text" inputMode="decimal" placeholder="12,50" value={amountText} onInput={(e) => setAmountText(val(e))} />
           </Field>
-        )}
+        </Group>
+      )}
 
+      <Group footer={recipient ? `Località: se vuota, ${recipient.defaultPlace || '—'}.` : undefined}>
         <Field label="Fornitore" warn={warn('supplier')}>
           <input type="text" value={supplier} onInput={(e) => setSupplier(val(e))} placeholder={isAuto ? 'Viaggio in auto' : ''} />
         </Field>
-        <Field label="Località" warn={warn('place')} hint={recipient ? `Se vuota: ${recipient.defaultPlace || '—'}` : undefined}>
+        <Field label="Località" warn={warn('place')}>
           <input type="text" value={place} onInput={(e) => setPlace(val(e))} />
         </Field>
-        <label class={`check${warn('invoice') ? ' warn' : ''}`}>
-          <input type="checkbox" checked={invoice} onChange={(e) => setInvoice((e.target as HTMLInputElement).checked)} />
-          C’è la fattura{warn('invoice') ? ' (da controllare)' : ''}
-        </label>
-        <div class={`field${payerWarn ? ' warn' : ''}`} role="group" aria-label="Pagato con">
-          <span class="field-label">Pagato con{payerWarn ? ' (da controllare)' : ''}</span>
-          <div class="pay-choice">
-            {(Object.keys(PAYER_LABELS) as Payer[]).map((p) => (
-              <button type="button" key={p} class={`pay-btn${payer === p ? ' on' : ''}`} aria-pressed={payer === p} onClick={() => choosePayer(p)}>
-                {PAYER_LABELS[p]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <Field label="Note">
-          <textarea rows={2} value={notes} onInput={(e) => setNotes(val(e))} />
-        </Field>
+      </Group>
 
-        {error ? <div class="banner error" role="alert">{error}</div> : null}
-        <button type="submit" class="btn primary big">Salva</button>
-        {existing ? <button type="button" class="btn danger big" onClick={() => void remove()}>Elimina spesa</button> : null}
-      </form>
+      <Group>
+        <Switch label="C’è la fattura" checked={invoice} onChange={setInvoice} warn={warn('invoice')} />
+        <div class={`row stack${payerWarn ? ' warn' : ''}`}>
+          <span class="row-label">Pagato con{payerWarn ? <small class="warn-tag">da controllare</small> : null}</span>
+          <Segmented options={payerOptions} value={payer} onChange={choosePayer} label="Pagato con" />
+        </div>
+      </Group>
+
+      <Group title="Note">
+        <label class="row stack">
+          <textarea rows={2} aria-label="Note" value={notes} onInput={(e) => setNotes(val(e))} />
+        </label>
+      </Group>
+
+      {existing ? (
+        <Group><button type="button" class="row tap destructive center" onClick={() => void remove()}>Elimina spesa</button></Group>
+      ) : null}
     </Sheet>
   );
 }

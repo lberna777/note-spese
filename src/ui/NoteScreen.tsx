@@ -8,7 +8,7 @@ import { formatEuro } from '../money';
 import { shareFile } from '../share';
 import { monthTotals } from '../totals';
 import type { Recipient } from '../types';
-import { Sheet } from './common';
+import { Group, Sheet } from './common';
 import type { AppData } from './useData';
 
 export function NoteScreen(props: { data: AppData; recipient: Recipient; month: string; onClose: () => void }) {
@@ -49,30 +49,32 @@ export function NoteScreen(props: { data: AppData; recipient: Recipient; month: 
   }
 
   return (
-    <Sheet title="Nota spese" onClose={props.onClose}>
-      <p><strong>{data.settings.headerName}</strong><br />{recipient.name} · {monthLabel(month)}</p>
-      {totals.rows.length === 0 ? <p class="muted">Nessuna spesa in questo mese.</p> : (
-        <ol class="note-rows">
-          {totals.rows.map((e, i) => (
-            <li key={e.id}>
-              <span class="n">{i + 1}</span>
-              <span class="grow">{shortDate(e.date)} · {e.supplier || categoryText(e)}<br /><small>{categoryText(e)} · {e.place} · fattura {e.invoice ? 'sì' : 'no'} · {payerText(e)}</small></span>
-              <strong>{formatEuro(e.amountCents)}</strong>
-            </li>
-          ))}
-        </ol>
-      )}
-      <dl class="totals">
-        <div><dt>{TOTAL_LABELS.total}</dt><dd>{formatEuro(totals.totalCents)}</dd></div>
-        <div><dt>{TOTAL_LABELS.paidByCompany}</dt><dd>{formatEuro(totals.paidByCompanyCents)}</dd></div>
-        <div><dt>{TOTAL_LABELS.advanced}</dt><dd>{formatEuro(totals.advancedPersonallyCents)}</dd></div>
-        <div class="strong"><dt>{reimburseLabel(recipient)}</dt><dd>{formatEuro(totals.toReimburseCents)}</dd></div>
-      </dl>
-      <div class="row-buttons">
-        <button type="button" class="btn primary big" disabled={!!busy || !totals.rows.length} onClick={() => void run('pdf')}>{busy === 'pdf' ? 'Preparo…' : 'PDF'}</button>
-        <button type="button" class="btn big" disabled={!!busy || !totals.rows.length} onClick={() => void run('xlsx')}>{busy === 'xlsx' ? 'Preparo…' : 'Excel'}</button>
+    <Sheet title="Nota spese" onClose={props.onClose} closeLabel="Chiudi" actionLabel="Fine">
+      <p class="note-head"><strong>{data.settings.headerName}</strong><br />{recipient.name} · {monthLabel(month)}</p>
+      <Group title="Spese">
+        {totals.rows.length === 0 ? <div class="row empty">Nessuna spesa in questo mese.</div> : null}
+        {totals.rows.map((e, i) => (
+          <div class="row two-line" key={e.id}>
+            <span class="n">{i + 1}</span>
+            <span class="grow">
+              <span class="primary-text">{shortDate(e.date)} · {e.supplier || categoryText(e)}</span>
+              <span class="secondary-text">{categoryText(e)} · {e.place} · fattura {e.invoice ? 'sì' : 'no'} · {payerText(e)}</span>
+            </span>
+            <span class="amount">{formatEuro(e.amountCents)}</span>
+          </div>
+        ))}
+      </Group>
+      <Group title="Totali">
+        <div class="row"><span class="grow">{TOTAL_LABELS.total}</span><span class="amount-plain">{formatEuro(totals.totalCents)}</span></div>
+        <div class="row"><span class="grow">{TOTAL_LABELS.paidByCompany}</span><span class="amount-plain">{formatEuro(totals.paidByCompanyCents)}</span></div>
+        <div class="row"><span class="grow">{TOTAL_LABELS.advanced}</span><span class="amount-plain">{formatEuro(totals.advancedPersonallyCents)}</span></div>
+        <div class="row"><span class="grow strong-text">{reimburseLabel(recipient)}</span><span class="amount">{formatEuro(totals.toReimburseCents)}</span></div>
+      </Group>
+      <div class="btn-pair">
+        <button type="button" class="btn-fill" disabled={!!busy || !totals.rows.length} onClick={() => void run('pdf')}>{busy === 'pdf' ? 'Preparo…' : 'PDF'}</button>
+        <button type="button" class="btn-plain" disabled={!!busy || !totals.rows.length} onClick={() => void run('xlsx')}>{busy === 'xlsx' ? 'Preparo…' : 'Excel'}</button>
       </div>
-      {msg ? <div class="banner" role="status">{msg}</div> : null}
+      {msg ? <Group><div class="row" role="status">{msg}</div></Group> : null}
     </Sheet>
   );
 }
