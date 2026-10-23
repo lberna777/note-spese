@@ -14,7 +14,7 @@ Le citazioni sono tradotte; ciò che non viene dalle HIG è segnato come scelta 
 | **Contenuto** | Elenchi a gruppi con angoli arrotondati | Raggruppare gli elementi collegati con spazio, forme contenitore o separatori |
 | **In basso** | Barra degli strumenti con le azioni per aggiungere spese: **Fotografa** (azione principale), **Galleria**, **Senza scontrino** | Una toolbar «agisce sul contenuto della vista»; le azioni non vanno nella barra di navigazione tra sezioni |
 
-*Scelta nostra, su richiesta di Lorenzo*: la navigazione tra le tre sezioni sta in alto, come
+*Scelta nostra, su richiesta del committente*: la navigazione tra le tre sezioni sta in alto, come
 controllo a segmenti, e non in una tab bar in basso, che sarebbe la soluzione abituale di iOS.
 Così il pollice trova in basso solo le azioni per aggiungere spese, che sono le più frequenti. La
 barra in basso compare solo nella sezione Mese, perché agisce su quella vista.
