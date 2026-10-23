@@ -22,6 +22,7 @@ export interface Theme {
   format: typeof THEME_FORMAT;
   version: typeof THEME_VERSION;
   companyName: string;
+  shortName: string; // nome breve per le etichette («Cliente / <nome breve>»), facoltativo
   logo: string; // data URL PNG/JPEG/SVG, stringa vuota = nessun logo
   colors: ThemeColors;
   fonts: { heading: HeadingFont; body: BodyFont };
@@ -32,6 +33,7 @@ export const DEFAULT_THEME: Theme = {
   format: THEME_FORMAT,
   version: THEME_VERSION,
   companyName: '',
+  shortName: '',
   logo: '',
   colors: {
     primary: '#1f3a5f',
@@ -66,6 +68,10 @@ export function validateTheme(raw: unknown): Theme {
   if (typeof name !== 'string' || !name.trim()) throw new Error('Tema non valido: manca il nome dell’azienda («companyName»).');
   if (name.length > MAX_TEXT_LENGTH) throw new Error(`Tema non valido: il nome dell’azienda supera ${MAX_TEXT_LENGTH} caratteri.`);
 
+  const short = raw.shortName ?? '';
+  if (typeof short !== 'string') throw new Error('Tema non valido: «shortName» deve essere un testo.');
+  if (short.length > 40) throw new Error('Tema non valido: il nome breve supera 40 caratteri.');
+
   let logo = '';
   if (raw.logo !== undefined && raw.logo !== '') {
     if (typeof raw.logo !== 'string' || !LOGO_RE.test(raw.logo)) {
@@ -95,6 +101,7 @@ export function validateTheme(raw: unknown): Theme {
     format: THEME_FORMAT,
     version: THEME_VERSION,
     companyName: name.trim(),
+    shortName: short.trim(),
     logo,
     colors,
     fonts: { heading, body },

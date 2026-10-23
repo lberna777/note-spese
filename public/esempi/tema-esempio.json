@@ -2,6 +2,7 @@
   "format": "note-spese-tema",
   "version": 1,
   "companyName": "Studio Aurora S.r.l.",
+  "shortName": "Studio Aurora",
   "logo": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCAxODAgNjAiPjxjaXJjbGUgY3g9IjMwIiBjeT0iMzgiIHI9IjE0IiBmaWxsPSIjZDg4OTRmIi8+PHBhdGggZD0iTTYgNDZhMjQgMjQgMCAwIDEgNDggMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjZmM2VlIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xMiA1MmExOCAxOCAwIDAgMSAzNiAwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmNmYzZWUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIuNyIvPjxyZWN0IHg9IjY2IiB5PSIyMiIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI2IiByeD0iMyIgZmlsbD0iI2Y2ZjNlZSIvPjxyZWN0IHg9IjY2IiB5PSIzNiIgd2lkdGg9IjcwIiBoZWlnaHQ9IjYiIHJ4PSIzIiBmaWxsPSIjZDg4OTRmIi8+PC9zdmc+",
   "colors": {
     "primary": "#12474f",

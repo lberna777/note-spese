@@ -1,5 +1,6 @@
 // Etichette in italiano condivise da interfaccia ed esportazioni.
-import type { Category, Payer } from './types';
+import type { Theme } from './theme';
+import type { Category, Payer, RecipientKind } from './types';
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   treno: 'Treno',
@@ -12,6 +13,12 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 };
 
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
+
+// Tipo di destinatario: «Cliente» oppure il nome della propria azienda preso dal tema.
+export function kindLabel(kind: RecipientKind, theme: Pick<Theme, 'shortName' | 'companyName'>): string {
+  if (kind === 'cliente') return 'Cliente';
+  return theme.shortName || theme.companyName || 'La tua azienda';
+}
 
 export const PAYER_LABELS: Record<Payer, string> = { azienda: 'Carta aziendale', personale: 'Carta personale' };
 

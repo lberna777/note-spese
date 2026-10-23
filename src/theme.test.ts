@@ -41,6 +41,7 @@ describe('validazione del tema', () => {
     ['nome mancante', (r) => delete r.companyName, /nome dell’azienda/],
     ['nome vuoto', (r) => (r.companyName = '   '), /nome dell’azienda/],
     ['nome troppo lungo', (r) => (r.companyName = 'x'.repeat(121)), /120 caratteri/],
+    ['nome breve troppo lungo', (r) => (r.shortName = 'x'.repeat(41)), /nome breve/],
     ['colore non esadecimale', (r) => (r.colors.accent = 'rame'), /«accent».*#RRGGBB/],
     ['colore corto', (r) => (r.colors.surface = '#fff'), /«surface»/],
     ['colore mancante', (r) => delete r.colors.textMuted, /«textMuted»/],

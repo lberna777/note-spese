@@ -1,3 +1,4 @@
+import { kindLabel } from '../labels';
 import { formatEuro } from '../money';
 import { advanceSummary } from '../totals';
 import { MonthPicker } from './common';
@@ -14,7 +15,7 @@ export function AdvancesScreen(props: { data: AppData; month: string; onMonth: (
       <ul class="expenses">
         {rows.map((r) => (
           <li key={r.recipient.id} class="expense static">
-            <span class="grow">{r.recipient.name}<small>{r.recipient.kind === 'cliente' ? 'cliente' : 'azienda'}</small></span>
+            <span class="grow">{r.recipient.name}<small>{kindLabel(r.recipient.kind, props.data.theme)}</small></span>
             <strong>{formatEuro(r.advancedCents)}</strong>
           </li>
         ))}

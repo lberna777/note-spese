@@ -1,8 +1,9 @@
 import { useState } from 'preact/hooks';
 import { exportBackup, importBackup } from '../backup';
 import { deleteRoute, deleteTheme, newId, putRecipient, putRoute, putSettings, putTheme } from '../db';
+import { kindLabel } from '../labels';
 import { formatRatePerKm, parseRatePerKm } from '../money';
-import { isDefaultTheme, parseThemeText } from '../theme';
+import { isDefaultTheme, parseThemeText, type Theme } from '../theme';
 import type { Recipient, RecipientKind, Route } from '../types';
 import { Field, Sheet, val } from './common';
 import type { AppData } from './useData';
@@ -22,7 +23,7 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
   async function saveGeneral(e: Event) {
     e.preventDefault();
     const cents = parseRatePerKm(rate);
-    if (cents == null) return setMsg('Tariffa non valida: scrivi per esempio 0,5000.');
+    if (cents == null) return setMsg('Rimborso auto non valido: scrivi per esempio 0,5000.');
     await putSettings({ ...data.settings, centsPerKm: cents, headerName: header.trim() || data.settings.headerName });
     await reload();
     setMsg('Impostazioni salvate.');
@@ -72,7 +73,7 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
   }
 
   if (editing) {
-    return <EditorSheet editing={editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await reload(); }} />;
+    return <EditorSheet theme={data.theme} editing={editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await reload(); }} />;
   }
 
   return (
@@ -86,7 +87,7 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
           {data.recipients.map((r) => (
             <li key={r.id}>
               <button type="button" class="expense" onClick={() => setEditing({ kind: 'recipient', item: r })}>
-                <span class="grow">{r.name}<small>{r.kind === 'cliente' ? 'cliente' : 'azienda'} · {r.defaultPlace || 'senza località'}{r.active ? '' : ' · non attivo'}</small></span>
+                <span class="grow">{r.name}<small>{kindLabel(r.kind, data.theme)} · {r.defaultPlace || 'senza località'}{r.active ? '' : ' · non attivo'}</small></span>
               </button>
             </li>
           ))}
@@ -109,12 +110,12 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
       </section>
 
       <form class="group form" onSubmit={(e) => void saveGeneral(e)}>
-        <h2>Tariffa e intestazione</h2>
-        <Field label="Tariffa al km (€/km, 4 decimali)">
-          <input type="text" inputMode="decimal" value={rate} onInput={(e) => setRate(val(e))} />
-        </Field>
-        <Field label="Nome nell’intestazione della nota">
+        <h2>I tuoi dati e il rimborso auto</h2>
+        <Field label="Il tuo nome" hint="Compare nella nota spese, alla voce «Consulente».">
           <input type="text" value={header} onInput={(e) => setHeader(val(e))} />
+        </Field>
+        <Field label="Rimborso auto (€ per km)" hint="Quanto ti viene rimborsato per ogni km fatto in auto, per esempio 0,5000.">
+          <input type="text" inputMode="decimal" value={rate} onInput={(e) => setRate(val(e))} />
         </Field>
         <button type="submit" class="btn primary">Salva</button>
       </form>
@@ -155,7 +156,7 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
   );
 }
 
-function EditorSheet(props: { editing: NonNullable<Editing>; onClose: () => void; onSaved: () => Promise<void> }) {
+function EditorSheet(props: { editing: NonNullable<Editing>; theme: Theme; onClose: () => void; onSaved: () => Promise<void> }) {
   const { editing } = props;
   const [item, setItem] = useState<Recipient | Route>(editing.item);
   const [err, setErr] = useState<string | null>(null);
@@ -192,8 +193,8 @@ function EditorSheet(props: { editing: NonNullable<Editing>; onClose: () => void
               <Field label="Nome"><input type="text" value={r.name} onInput={(e) => patch({ name: val(e) })} /></Field>
               <Field label="Tipo">
                 <select value={r.kind} onChange={(e) => patch({ kind: val(e) as RecipientKind })}>
-                  <option value="cliente">Cliente</option>
-                  <option value="azienda">Azienda</option>
+                  <option value="cliente">{kindLabel('cliente', props.theme)}</option>
+                  <option value="azienda">{kindLabel('azienda', props.theme)}</option>
                 </select>
               </Field>
               <Field label="Località predefinita"><input type="text" value={r.defaultPlace} onInput={(e) => patch({ defaultPlace: val(e) })} /></Field>
