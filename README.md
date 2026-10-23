@@ -8,6 +8,8 @@ propria azienda).
 **La demo contiene solo dati inventati**: persone, aziende, fornitori e scontrini di esempio sono
 fittizi.
 
+Provala: https://lberna777.github.io/note-spese/ (dal telefono si aggiunge alla schermata Home).
+
 ## Principio: tutto nel telefono
 
 Nessun server e nessuna richiesta a terzi. La lettura dello scontrino (OCR) avviene nel browser,
