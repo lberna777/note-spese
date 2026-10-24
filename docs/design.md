@@ -82,3 +82,34 @@ carattere di sistema. Un'unica famiglia per titoli, testo, PDF ed Excel.
 - Un tema della versione 1 si importa ancora: i colori vecchi si convertono nelle due varianti.
 - **Senza tema** l'app usa un tema neutro (grafite e blu) con la stessa struttura.
 - Il PDF usa sempre la variante chiara, perché si stampa e si legge su carta.
+
+## Azienda e clienti, separati a colpo d'occhio (2026-10-24)
+
+Le spese per la propria azienda e quelle per i clienti non si devono confondere.
+
+- **Telefono, Mese**: prima un blocco **«La tua azienda»** (nome breve del tema), poi l'intestazione
+  **«Clienti»** con le sezioni dei clienti. Il blocco dell'azienda sta su fondo `surface`, con un
+  filetto d'accento spesso 3 px sul lato sinistro e l'etichetta «Nota spese interna»; i clienti
+  restano sul fondo della pagina, senza riquadro. Tra i due blocchi, più spazio e un filetto
+  d'accento a tutta larghezza.
+- **Computer, barra laterale**: due gruppi con etichetta, **Azienda** (in cima, con il filetto
+  laterale d'accento) e **Clienti**.
+- **Computer, contenuto**: con l'azienda selezionata, intestazione e riquadri dei totali stanno su
+  una fascia `surface` con filetto d'accento in alto, e sopra il titolo l'etichetta «Nota spese
+  interna · rimborso al consulente». Con un cliente: «Nota spese per il cliente».
+- **PDF**: la nota verso l'azienda porta sotto il titolo «Nota spese interna»; quella verso un
+  cliente «Nota spese per il cliente».
+
+## Scansione dello scontrino (2026-10-24)
+
+Come la scansione dei documenti nelle Note di iPhone, ma tutta nel telefono.
+
+1. Dopo la foto (fotocamera, galleria o «Carica scontrino» sul computer) si apre **Ritaglia**:
+   la foto a tutto schermo con i **quattro angoli dello scontrino** già trovati e un quadrilatero
+   d'accento semitrasparente. Gli angoli si trascinano (maniglie da 44 pt, lente d'ingrandimento
+   sotto il dito sul telefono). Pulsanti: «Rifai» · «Usa tutta la foto» · **«Continua»** (in
+   evidenza).
+2. Si raddrizza la prospettiva e si applica il filtro **Documento** (fondo bianco, testo nero
+   nitido, toni di grigio) oppure **Colore** (colori originali, contrasto migliorato); scelta in
+   un controllo a due voci sotto l'anteprima, predefinito Documento.
+3. L'immagine scansionata sostituisce la foto: è quella che si legge, che si salva e che va nel PDF.
