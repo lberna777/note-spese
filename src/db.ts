@@ -13,6 +13,12 @@ export const STORES = ['expenses', 'photos', 'recipients', 'routes', 'settings',
 export type StoreName = (typeof STORES)[number];
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
+let onBlocked: (() => void) | undefined;
+
+// L'interfaccia si registra per sapere se l'apertura dell'archivio è bloccata da un'altra scheda.
+export function setBlockedListener(fn: (() => void) | undefined): void {
+  onBlocked = fn;
+}
 
 export function newId(): string {
   const c = globalThis.crypto;
@@ -40,6 +46,17 @@ async function open(): Promise<IDBPDatabase> {
           cursor = await cursor.continue();
         }
       }
+    },
+    // Un'altra scheda tiene aperta una versione vecchia dell'archivio: l'aggiornamento aspetta
+    // che si chiuda. Lo si dice all'interfaccia invece di restare in attesa senza spiegazioni.
+    blocked() {
+      onBlocked?.();
+    },
+    // Questa scheda è la versione vecchia: chiude l'archivio e si ricarica con il codice nuovo.
+    blocking() {
+      dbPromise?.then((d) => d.close()).catch(() => undefined);
+      dbPromise = null;
+      location.reload();
     },
   });
   // Dati finti solo alla prima apertura: la presenza delle impostazioni è il segnale.

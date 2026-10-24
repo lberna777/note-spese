@@ -48,7 +48,15 @@ export function App() {
     window.scrollTo(0, 0);
   };
 
-  if (error) return <div class="screen center"><p class="group alert-box">Errore nell’archivio: {error}</p></div>;
+  // Se l'archivio si sblocca (l'altra scheda è stata chiusa) i dati arrivano e l'avviso sparisce.
+  if (error && !data) {
+    return (
+      <div class="screen center">
+        <p class="group alert-box">{error}</p>
+        <button type="button" class="btn" onClick={() => location.reload()}>Ricarica</button>
+      </div>
+    );
+  }
   if (!data) return <div class="screen center"><p>Carico…</p></div>;
 
   const defaultDate = month === currentMonth() ? todayIso() : `${month}-01`;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
-import { getSettings, getTheme, listExpenses, listKnownSuppliers, listRecipients, listRoutes } from '../db';
+import { setBlockedListener, getSettings, getTheme, listExpenses, listKnownSuppliers, listRecipients, listRoutes } from '../db';
 import type { Theme } from '../theme';
 import type { Expense, KnownSupplier, Recipient, Route, Settings } from '../types';
 
@@ -30,7 +30,21 @@ export function useData(): { data: AppData | null; reload: () => Promise<void>; 
     }
   }, []);
   useEffect(() => {
-    void reload();
+    setBlockedListener(() =>
+      setError('L’app è aperta anche in un’altra scheda con una versione precedente: chiudi le altre schede di Note spese e ricarica questa pagina.'),
+    );
+    // Se dopo 10 secondi l'archivio non risponde, meglio un messaggio che un «Carico…» infinito.
+    const t = setTimeout(() => {
+      setData((d) => {
+        if (!d) setError('L’archivio non risponde. Chiudi le altre schede di Note spese e ricarica la pagina.');
+        return d;
+      });
+    }, 10_000);
+    void reload().finally(() => clearTimeout(t));
+    return () => {
+      clearTimeout(t);
+      setBlockedListener(undefined);
+    };
   }, [reload]);
   return { data, reload, error };
 }
