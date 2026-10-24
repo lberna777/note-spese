@@ -103,7 +103,9 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
   font('light', 26);
   doc.setTextColor(...col.text);
   doc.text('Nota spese', margin, headerBottom + 17);
-  const metaY = headerBottom + 28;
+  // Sotto il titolo si dice a chi è rivolta la nota: all'azienda (interna) o a un cliente.
+  caps(recipient.kind === 'azienda' ? 'Nota spese interna' : 'Nota spese per il cliente', margin, headerBottom + 24, 7.5, col.accentText);
+  const metaY = headerBottom + 33;
   const meta: [string, string][] = [['Consulente', headerName], ['Destinatario', recipient.name], ['Mese', monthLabel(month)]];
   const metaX = [margin, margin + 58, margin + 128];
   meta.forEach(([k, val], i) => {

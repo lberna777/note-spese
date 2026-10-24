@@ -47,3 +47,14 @@ describe('advanceSummary', () => {
     expect(s.map((r) => r.advancedCents)).toEqual([500, 700]);
   });
 });
+
+describe('splitByKind', () => {
+  it('separa azienda e clienti mantenendo l’ordine', async () => {
+    const { splitByKind } = await import('./totals');
+    const r = (id: string, kind: 'cliente' | 'azienda') => ({ id, name: id, kind, defaultPlace: '', active: true });
+    const items = [r('a', 'cliente'), r('b', 'azienda'), r('c', 'cliente')];
+    const s = splitByKind(items, (x) => x);
+    expect(s.company.map((x) => x.id)).toEqual(['b']);
+    expect(s.clients.map((x) => x.id)).toEqual(['a', 'c']);
+  });
+});

@@ -76,3 +76,13 @@ export function buildSeed(now: Date = new Date()): SeedData {
 
   return { recipients, routes, settings, expenses, knownSuppliers };
 }
+
+// Gli id dei dati finti: servono a riconoscerli per «Cancella i dati di prova».
+export function seedIds(): { expenses: Set<string>; recipients: Set<string>; routes: Set<string> } {
+  const s = buildSeed();
+  return {
+    expenses: new Set(s.expenses.map((e) => e.id)),
+    recipients: new Set(s.recipients.map((r) => r.id)),
+    routes: new Set(s.routes.map((r) => r.id)),
+  };
+}

@@ -49,6 +49,12 @@ export function MonthDesktop(props: {
 
   return (
     <main class="pc-main">
+      <div class={`pc-band${group ? (group.r.kind === 'azienda' ? ' company' : ' client') : ''}`} data-testid="pc-band">
+      {group ? (
+        <div class={`band-label lbl${group.r.kind === 'azienda' ? ' lbl-accent' : ''}`}>
+          {group.r.kind === 'azienda' ? 'Nota spese interna · rimborso al consulente' : 'Nota spese per il cliente'}
+        </div>
+      ) : null}
       <div class="pc-head">
         <div>
           <div class="lbl head-sub">{group ? `${group.r.name} · ${kindLabel(group.r.kind, data.theme)}` : 'Nessun destinatario'}</div>
@@ -68,6 +74,7 @@ export function MonthDesktop(props: {
         <div><div class="lbl">Carta aziendale</div><div class="v num">{formatEuro(t?.paidByCompanyCents ?? 0)}</div></div>
         <div><div class="lbl">Carta personale</div><div class="v num">{formatEuro(t?.advancedPersonallyCents ?? 0)}</div></div>
         <div><div class="lbl">{group ? reimburseLabel(group.r) : 'Da rimborsare'}</div><div class="v accent num">{formatEuro(t?.toReimburseCents ?? 0)}</div></div>
+      </div>
       </div>
 
       {t && t.rows.length > 0 ? (

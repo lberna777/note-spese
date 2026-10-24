@@ -50,3 +50,11 @@ export function advanceSummary(
     advancedCents: monthTotals(expenses, recipient, month).advancedPersonallyCents,
   }));
 }
+
+// Separa gli elementi dell'azienda da quelli dei clienti, per mostrarli in blocchi distinti.
+export function splitByKind<T>(items: T[], recipientOf: (item: T) => Recipient): { company: T[]; clients: T[] } {
+  return {
+    company: items.filter((i) => recipientOf(i).kind === 'azienda'),
+    clients: items.filter((i) => recipientOf(i).kind !== 'azienda'),
+  };
+}

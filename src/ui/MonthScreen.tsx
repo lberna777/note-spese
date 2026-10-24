@@ -3,7 +3,7 @@ import { categoryText, reimburseLabel } from '../export/rows';
 import { currentDevice, dismissIosHint, iosHintDismissed, shouldShowIosHint } from '../ios';
 import { kindLabel, monthLabel, PAYER_SHORT, shortDate } from '../labels';
 import { formatEuro } from '../money';
-import { monthTotals } from '../totals';
+import { monthTotals, splitByKind } from '../totals';
 import type { Expense, Recipient } from '../types';
 import { ScreenTitle } from './common';
 import { IconCamera, IconClose, IconPhotos, IconPlus, IconWarning } from './icons';
@@ -28,7 +28,10 @@ export interface MonthGroup {
 }
 
 export function monthGroups(data: AppData, month: string): MonthGroup[] {
-  return data.recipients.map((r) => ({ r, t: monthTotals(data.expenses, r, month) })).filter((g) => g.t.rows.length > 0);
+  // L'azienda per prima (come nella barra laterale), poi i clienti; a parità resta l'ordine dell'elenco.
+  const all = data.recipients.map((r) => ({ r, t: monthTotals(data.expenses, r, month) })).filter((g) => g.t.rows.length > 0);
+  const { company, clients } = splitByKind(all, (g) => g.r);
+  return [...company, ...clients];
 }
 
 // Mese del telefono: titolo, striscia dei totali, una sezione per destinatario, barra in basso con le azioni.
@@ -47,8 +50,31 @@ export function MonthScreen(props: {
   const gallery = useRef<HTMLInputElement>(null);
   const [iosHint, setIosHint] = useState(() => shouldShowIosHint(currentDevice()) && !iosHintDismissed());
   const groups = monthGroups(data, month);
+  const { company, clients } = splitByKind(groups, (g) => g.r);
   const count = groups.reduce((s, g) => s + g.t.rows.length, 0);
   const sum = (f: (g: MonthGroup) => number) => groups.reduce((s, g) => s + f(g), 0);
+
+  const section = ({ r, t }: MonthGroup) => (
+    <section class="sect" key={r.id}>
+      <div class="sect-head"><span class="lbl lbl-accent">{r.name}</span><span class="lbl">{kindLabel(r.kind, data.theme)}</span></div>
+      <div class="rows">
+        {t.rows.map((e) => (
+          <button type="button" class="row exp" key={e.id} onClick={() => props.onEdit(e)}>
+            <span class="grow">
+              <span class="nome">{e.supplier || categoryText(e)}</span>
+              <span class="meta">{expenseMeta(e)}</span>
+            </span>
+            <span class="right-col">
+              <span class="imp num">{formatEuro(e.amountCents)}</span>
+              <span class="data num">{shortDate(e.date)}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <div class="sect-foot"><span class="lbl">{reimburseLabel(r)}</span><span class="v accent num">{formatEuro(t.toReimburseCents)}</span></div>
+      <button type="button" class="cta-nota" onClick={() => props.onNote(r)}>Nota spese</button>
+    </section>
+  );
 
   const picked = (e: Event) => {
     const input = e.target as HTMLInputElement;
@@ -88,27 +114,19 @@ export function MonthScreen(props: {
       ) : null}
 
       {groups.length === 0 ? <p class="empty">Nessuna spesa in questo mese.</p> : null}
-      {groups.map(({ r, t }) => (
-        <section class="sect" key={r.id}>
-          <div class="sect-head"><span class="lbl lbl-accent">{r.name}</span><span class="lbl">{kindLabel(r.kind, data.theme)}</span></div>
-          <div class="rows">
-            {t.rows.map((e) => (
-              <button type="button" class="row exp" key={e.id} onClick={() => props.onEdit(e)}>
-                <span class="grow">
-                  <span class="nome">{e.supplier || categoryText(e)}</span>
-                  <span class="meta">{expenseMeta(e)}</span>
-                </span>
-                <span class="right-col">
-                  <span class="imp num">{formatEuro(e.amountCents)}</span>
-                  <span class="data num">{shortDate(e.date)}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-          <div class="sect-foot"><span class="lbl">{reimburseLabel(r)}</span><span class="v accent num">{formatEuro(t.toReimburseCents)}</span></div>
-          <button type="button" class="cta-nota" onClick={() => props.onNote(r)}>Nota spese</button>
-        </section>
-      ))}
+      {company.length > 0 ? (
+        <div class="company-block" data-testid="company-block">
+          <div class="block-head"><span class="block-title">La tua azienda</span><span class="lbl lbl-accent">Nota spese interna</span></div>
+          {company.map((g) => section(g))}
+        </div>
+      ) : null}
+      {company.length > 0 && clients.length > 0 ? <hr class="hair block-sep" /> : null}
+      {clients.length > 0 ? (
+        <div class="clients-block" data-testid="clients-block">
+          <div class="block-head"><span class="block-title">Clienti</span></div>
+          {clients.map((g) => section(g))}
+        </div>
+      ) : null}
 
       <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={picked} data-testid="camera-input" />
       <input ref={gallery} type="file" accept="image/*" hidden onChange={picked} data-testid="gallery-input" />

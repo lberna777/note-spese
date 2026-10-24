@@ -1,6 +1,6 @@
 // Archivio IndexedDB: tutto resta nel telefono.
 import { openDB, type IDBPDatabase } from 'idb';
-import { buildSeed, type SeedData } from './seed';
+import { buildSeed, seedIds, type SeedData } from './seed';
 import { DEFAULT_THEME, validateTheme, type Theme } from './theme';
 import type { Expense, KnownSupplier, Photo, Recipient, Route, Settings } from './types';
 
@@ -8,6 +8,8 @@ export const DB_NAME = 'note-spese';
 export const DB_VERSION = 2;
 const SETTINGS_KEY = 'main';
 const THEME_KEY = 'theme';
+// Segnale nell'archivio: dopo «Cancella tutto» i dati finti non si ricaricano più.
+const NO_SEED_KEY = 'noSeed';
 
 export const STORES = ['expenses', 'photos', 'recipients', 'routes', 'settings', 'knownSuppliers'] as const;
 export type StoreName = (typeof STORES)[number];
@@ -60,10 +62,11 @@ async function open(): Promise<IDBPDatabase> {
     },
   });
   // Dati finti solo alla prima apertura: la presenza delle impostazioni è il segnale.
-  if ((await db.get('settings', SETTINGS_KEY)) === undefined) {
+  // Dopo «Cancella tutto» c'è anche il segnale `noSeed`: l'app riparte vuota e resta vuota.
+  if ((await db.get('settings', SETTINGS_KEY)) === undefined && (await db.get('settings', NO_SEED_KEY)) === undefined) {
     const s = buildSeed();
     const tx = db.transaction([...STORES], 'readwrite');
-    if ((await tx.objectStore('settings').get(SETTINGS_KEY)) === undefined) {
+    if ((await tx.objectStore('settings').get(SETTINGS_KEY)) === undefined && (await tx.objectStore('settings').get(NO_SEED_KEY)) === undefined) {
       await writeAll(tx, s);
     }
     await tx.done;
@@ -134,14 +137,37 @@ export async function listRecipients(): Promise<Recipient[]> {
 export async function putRecipient(r: Recipient): Promise<void> {
   await (await getDb()).put('recipients', r);
 }
+// Elimina un destinatario insieme alle sue spese e ai loro scontrini. Restituisce quante spese ha tolto.
+export async function deleteRecipient(id: string): Promise<number> {
+  const db = await getDb();
+  const tx = db.transaction(['recipients', 'expenses', 'photos'], 'readwrite');
+  const expenses = (await tx.objectStore('expenses').getAll()) as Expense[];
+  const own = expenses.filter((e) => e.recipientId === id);
+  for (const e of own) {
+    await tx.objectStore('expenses').delete(e.id);
+    if (e.photoId) await tx.objectStore('photos').delete(e.photoId);
+  }
+  await tx.objectStore('recipients').delete(id);
+  await tx.done;
+  return own.length;
+}
 export async function listRoutes(): Promise<Route[]> {
   return (await getDb()).getAll('routes');
 }
 export async function putRoute(r: Route): Promise<void> {
   await (await getDb()).put('routes', r);
 }
-export async function deleteRoute(id: string): Promise<void> {
-  await (await getDb()).delete('routes', id);
+// Elimina una tratta. Le spese in auto che la usavano restano (km e importo sono già salvati) ma senza tratta collegata.
+// Restituisce quante spese ha scollegato.
+export async function deleteRoute(id: string): Promise<number> {
+  const db = await getDb();
+  const tx = db.transaction(['routes', 'expenses'], 'readwrite');
+  const expenses = (await tx.objectStore('expenses').getAll()) as Expense[];
+  const used = expenses.filter((e) => e.routeId === id);
+  for (const e of used) await tx.objectStore('expenses').put({ ...e, routeId: null });
+  await tx.objectStore('routes').delete(id);
+  await tx.done;
+  return used.length;
 }
 
 // --- impostazioni ---
@@ -151,6 +177,11 @@ export async function getSettings(): Promise<Settings> {
 }
 export async function putSettings(s: Settings): Promise<void> {
   await (await getDb()).put('settings', s, SETTINGS_KEY);
+}
+
+// Svuota i dati personali salvati nelle impostazioni (oggi: il nome). Il resto delle impostazioni non cambia.
+export async function clearPersonalData(): Promise<void> {
+  await putSettings({ ...(await getSettings()), headerName: '' });
 }
 
 // --- tema grafico (solo sul telefono) ---
@@ -210,4 +241,48 @@ export async function replaceEverything(d: DumpData): Promise<void> {
   await writeAll(tx, { ...d, settings: d.settings });
   for (const p of d.photos) await tx.objectStore('photos').put(p);
   await tx.done;
+}
+
+// Impostazioni di un'app vuota: nessun dato personale, rimborso al valore di partenza.
+export const EMPTY_SETTINGS: Settings = { centsPerKm: 50, headerName: '', lastBackupAt: null, appearance: 'auto' };
+
+// «Cancella tutto»: spese, foto, destinatari, tratte, fornitori noti, impostazioni e tema. L'app riparte vuota,
+// senza dati finti: il segnale `noSeed` impedisce di ricaricarli alla prossima apertura.
+export async function wipeEverything(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction([...STORES], 'readwrite');
+  for (const name of STORES) await tx.objectStore(name).clear();
+  await tx.objectStore('settings').put({ ...EMPTY_SETTINGS }, SETTINGS_KEY);
+  await tx.objectStore('settings').put(true, NO_SEED_KEY);
+  await tx.done;
+}
+
+// «Cancella i dati di prova»: toglie solo spese, destinatari e tratte del seed (riconoscibili dagli id), tenendo
+// tema e impostazioni. Un destinatario o una tratta del seed ancora usati da spese tue restano.
+export async function deleteSampleData(): Promise<{ expenses: number; recipients: number; routes: number }> {
+  const ids = seedIds();
+  const db = await getDb();
+  const tx = db.transaction(['expenses', 'photos', 'recipients', 'routes'], 'readwrite');
+  const all = (await tx.objectStore('expenses').getAll()) as Expense[];
+  let expenses = 0;
+  for (const e of all.filter((x) => ids.expenses.has(x.id))) {
+    await tx.objectStore('expenses').delete(e.id);
+    if (e.photoId) await tx.objectStore('photos').delete(e.photoId);
+    expenses++;
+  }
+  const rest = all.filter((x) => !ids.expenses.has(x.id));
+  let recipients = 0;
+  for (const id of ids.recipients) {
+    if (rest.some((e) => e.recipientId === id) || (await tx.objectStore('recipients').get(id)) === undefined) continue;
+    await tx.objectStore('recipients').delete(id);
+    recipients++;
+  }
+  let routes = 0;
+  for (const id of ids.routes) {
+    if (rest.some((e) => e.routeId === id) || (await tx.objectStore('routes').get(id)) === undefined) continue;
+    await tx.objectStore('routes').delete(id);
+    routes++;
+  }
+  await tx.done;
+  return { expenses, recipients, routes };
 }

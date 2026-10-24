@@ -361,6 +361,45 @@ table.expenses { width: 100%; border-collapse: collapse; }
   .sheet-body .row.warn { box-shadow: inset 2px 0 0 var(--accent); }
 }
 
+/* ---------- Azienda e clienti separati a colpo d'occhio (docs/design.md) ---------- */
+.block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 22px; }
+.block-title { font-size: 20px; font-weight: 300; letter-spacing: -0.01em; }
+.company-block { margin-top: 22px; background: var(--surface); border-left: 3px solid var(--accent); padding: 0 16px 20px; }
+.company-block .block-head { padding-top: 16px; }
+.company-block .sect:first-of-type { padding-top: 18px; }
+.company-block .sect + .sect { padding-top: 30px; }
+.company-block .row.exp:active { background: var(--sel); }
+.block-sep { margin: 34px 0 0; }
+.clients-block { padding-bottom: 4px; }
+.dest-group + .dest-group { margin-top: 22px; }
+.dest-group.company { background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); padding: 10px 10px 4px 12px; margin-left: -22px; padding-left: 22px; margin-right: -4px; }
+.dest-group.company li.on button { background: var(--sel); }
+.pc-band.company { background: var(--surface); border-top: 3px solid var(--accent); padding: 18px 24px 4px; margin-bottom: 26px; }
+.pc-band .band-label { margin-bottom: 12px; }
+.pc-band.company .cards { margin-bottom: 22px; }
+.pc-band.company .cards > div { background: var(--surface); }
+.pc-band.client .cards, .pc-band.company .cards { margin-top: 0; }
+.pc-band.client { margin-bottom: 26px; }
+.group.company { background: var(--surface); border-left: 3px solid var(--accent); }
+.group.company .row { padding-left: 14px; padding-right: 14px; }
+.group.danger { border-top-color: var(--danger); }
+.danger-row, .danger-row.row { color: var(--danger); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+.btn-danger {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 12px 20px; border-radius: 0; cursor: pointer;
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; background: var(--danger); border: 1px solid var(--danger); color: #fff;
+}
+.btn-danger:disabled { opacity: 0.4; cursor: default; }
+
+/* Finestra di conferma delle cancellazioni */
+.confirm-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.confirm { width: 100%; max-width: 440px; background: var(--surface); color: var(--text); border-top: 3px solid var(--danger); padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 14px; max-height: 100%; overflow-y: auto; }
+.confirm-title { font-size: 20px; font-weight: 300; }
+.confirm-text p { font-size: 15px; line-height: 1.45; font-weight: 300; }
+.confirm-phrase { display: flex; flex-direction: column; gap: 6px; }
+.confirm-phrase input { min-height: 46px; padding: 0 12px; background: var(--bg); border: 1px solid var(--line-accent); border-radius: 0; font-size: 16px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.confirm-actions > button { flex: 1 1 140px; }
+
 /* ---------- Preferenze dell'utente ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

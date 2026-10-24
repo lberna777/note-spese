@@ -1,5 +1,6 @@
 import { kindLabel } from '../labels';
 import { formatDecimal } from '../money';
+import { splitByKind } from '../totals';
 import type { Theme } from '../theme';
 import { BrandBar } from './BrandBar';
 import { MonthPicker } from './common';
@@ -27,6 +28,19 @@ export function DesktopSidebar(props: {
 }) {
   const { theme } = props;
   const backup = props.lastBackupAt ? new Date(props.lastBackupAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  const { company, clients } = splitByKind(props.groups, (g) => g.r);
+  const list = (gs: MonthGroup[]) => (
+    <ul>
+      {gs.map(({ r, t }) => (
+        <li key={r.id} class={props.selectedId === r.id ? 'on' : ''}>
+          <button type="button" onClick={() => props.onSelect(r.id)} aria-pressed={props.selectedId === r.id} title={kindLabel(r.kind, theme)}>
+            <span class="dest-name">{r.name}</span>
+            <span class="n num">{formatDecimal(t.totalCents)}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <aside class="pc-side" aria-label="Menu">
       <div class="side-brand">
@@ -42,18 +56,19 @@ export function DesktopSidebar(props: {
       </nav>
       <MonthPicker month={props.month} onChange={props.onMonth} />
       <div class="dest">
-        <div class="lbl">Destinatari del mese</div>
         {props.groups.length === 0 ? <p class="empty small">Nessuna spesa in questo mese.</p> : null}
-        <ul>
-          {props.groups.map(({ r, t }) => (
-            <li key={r.id} class={props.selectedId === r.id ? 'on' : ''}>
-              <button type="button" onClick={() => props.onSelect(r.id)} aria-pressed={props.selectedId === r.id} title={kindLabel(r.kind, theme)}>
-                <span class="dest-name">{r.name}</span>
-                <span class="n num">{formatDecimal(t.totalCents)}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {company.length > 0 ? (
+          <div class="dest-group company" data-testid="side-company">
+            <div class="lbl lbl-accent">Azienda</div>
+            {list(company)}
+          </div>
+        ) : null}
+        {clients.length > 0 ? (
+          <div class="dest-group" data-testid="side-clients">
+            <div class="lbl">Clienti</div>
+            {list(clients)}
+          </div>
+        ) : null}
       </div>
       <div class="side-foot">
         <div class="lbl">Ultimo backup</div>

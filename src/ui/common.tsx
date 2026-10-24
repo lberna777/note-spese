@@ -201,3 +201,61 @@ export function usePhotoUrl(photoId: string | null | undefined, blob?: Blob | nu
   }, [photoId, blob]);
   return url;
 }
+
+// Finestra di conferma per le cancellazioni: dice cosa si perde, pulsante distruttivo in rosso. Con `phrase` il pulsante
+// si attiva solo dopo aver scritto la parola richiesta (per esempio «CANCELLA»).
+export function ConfirmDialog(props: {
+  title: string;
+  children: ComponentChildren;
+  confirmLabel: string;
+  phrase?: string;
+  onConfirm: () => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+  const ok = !props.phrase || typed.trim() === props.phrase;
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        props.onCancel();
+      }
+    };
+    window.addEventListener('keydown', key, true);
+    return () => window.removeEventListener('keydown', key, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div class="confirm-backdrop">
+      <div class="confirm" role="alertdialog" aria-modal="true" aria-label={props.title}>
+        <h2 class="confirm-title">{props.title}</h2>
+        <div class="confirm-text">{props.children}</div>
+        {props.phrase ? (
+          <label class="confirm-phrase">
+            <span class="lbl">Per confermare scrivi {props.phrase}</span>
+            <input type="text" value={typed} autoComplete="off" autoCapitalize="characters" onInput={(e) => setTyped((e.target as HTMLInputElement).value)} />
+          </label>
+        ) : null}
+        <div class="confirm-actions">
+          <button type="button" class="btn-out" onClick={props.onCancel}>Annulla</button>
+          <button
+            type="button"
+            class="btn-danger"
+            disabled={!ok || busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await props.onConfirm();
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {props.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
