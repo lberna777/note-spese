@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -53,5 +54,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts'],
+    // OpenCV.js ha un metodo `then`: importato da vitest come modulo esterno viene scambiato per una
+    // promessa e l'importazione non finisce mai. Nei test lo carica un involucro (vedi cv-node.ts).
+    alias: { '@techstark/opencv-js': fileURLToPath(new URL('./src/scan/cv-node.ts', import.meta.url)) },
   },
 });

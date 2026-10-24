@@ -1,0 +1,83 @@
+/* Schermata «Ritaglia» e anteprima della scansione. Colori, filetti e caratteri vengono dal tema (variabili di styles.css). */
+.scan-backdrop {
+  position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; font-family: var(--font);
+  color: var(--text); touch-action: none; -webkit-user-select: none; user-select: none;
+}
+.scan-window {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg);
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+.scan-head { display: flex; align-items: center; justify-content: center; min-height: 48px; border-bottom: 1px solid var(--line-accent); flex: none; }
+.scan-head h1 { margin: 0; }
+
+.scan-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.scan-img { position: absolute; display: block; max-width: none; pointer-events: none; }
+.scan-result { position: absolute; inset: 20px; width: calc(100% - 40px); height: calc(100% - 40px); object-fit: contain; border: 1px solid var(--line); background: #fff; }
+.scan-svg { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.scan-quad { fill: color-mix(in srgb, var(--accent) 24%, transparent); stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.scan-quad-halo { fill: none; stroke: var(--bg); stroke-width: 5; stroke-linejoin: round; opacity: 0.85; }
+
+/* Maniglia: l'area di tocco è 44 x 44, il segno visibile è un anello più piccolo */
+.scan-handle {
+  position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; padding: 0; border: 0; background: transparent;
+  display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none;
+}
+.scan-handle i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--accent); background: color-mix(in srgb, var(--bg) 70%, transparent); box-shadow: 0 0 0 2px var(--bg); }
+.scan-handle.on { cursor: grabbing; }
+.scan-handle.on i { background: var(--accent); }
+.scan-handle:focus-visible { outline: none; }
+.scan-handle:focus-visible i { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+
+.scan-loupe {
+  position: absolute; width: 112px; height: 112px; border-radius: 50%; overflow: hidden; pointer-events: none;
+  border: 2px solid var(--accent); box-shadow: 0 0 0 2px var(--bg); background: var(--surface);
+}
+.scan-loupe canvas { display: block; width: 100%; height: 100%; }
+.scan-loupe::before, .scan-loupe::after { content: ''; position: absolute; background: var(--accent); }
+.scan-loupe::before { left: 50%; top: 38%; bottom: 38%; width: 1px; }
+.scan-loupe::after { top: 50%; left: 38%; right: 38%; height: 1px; }
+
+.scan-busy {
+  position: absolute; left: 0; right: 0; bottom: 20px; text-align: center; margin: 0 auto; width: fit-content; max-width: 90%;
+  padding: 10px 16px; background: var(--surface); border: 1px solid var(--line-accent); font-size: 13px; color: var(--text);
+}
+.scan-hint { margin: 0; padding: 10px 20px; text-align: center; font-size: 13px; font-weight: 300; color: var(--muted); flex: none; }
+.scan-hint.warn { color: var(--danger); font-weight: 600; }
+
+/* Barra dei pulsanti: «Continua» è l'unica azione in evidenza */
+.scan-bar {
+  flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 20px 16px; border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.scan-bar .scan-go { grid-column: 1 / -1; }
+.scan-bar.two { grid-template-columns: 1fr 1fr; }
+.scan-bar.two .scan-go { grid-column: auto; }
+.scan-bar button { min-height: 48px; }
+
+/* Controllo a due voci: filetto d'accento sotto la voce attiva, come il menu */
+.scan-seg { flex: none; display: flex; justify-content: center; gap: 28px; padding: 6px 20px 0; border-top: 1px solid var(--line); }
+.scan-seg button {
+  min-height: 44px; padding: 0 4px; background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+}
+.scan-seg button.on { color: var(--accent-text); border-bottom-color: var(--accent); }
+.scan-seg button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* Computer: finestra centrata */
+@media (min-width: 900px) {
+  .scan-backdrop { align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); }
+  .scan-window {
+    flex: none; width: min(860px, 92vw); height: min(880px, 90dvh); background: var(--surface); border: 1px solid var(--line-accent);
+    padding: 0;
+  }
+  .scan-bar { background: var(--surface); grid-template-columns: auto auto 1fr; justify-content: stretch; }
+  .scan-bar .scan-go { grid-column: auto; justify-self: end; min-width: 200px; }
+  .scan-bar.two { grid-template-columns: auto 1fr; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .scan-backdrop { background: var(--bg); }
+  .scan-quad { fill: none; }
+}
+@media (prefers-contrast: more) {
+  .scan-hint { color: var(--text); }
+}

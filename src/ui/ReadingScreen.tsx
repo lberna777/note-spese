@@ -12,7 +12,7 @@ export interface ReadingResult {
 }
 
 // Schermata «Lettura»: riduce e salva la foto, legge il testo, compila una bozza.
-export function ReadingScreen(props: { file: File; data: AppData; onDone: (r: ReadingResult) => void }) {
+export function ReadingScreen(props: { file: Blob; data: AppData; notice?: string; onDone: (r: ReadingResult) => void }) {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState('Preparo la foto…');
 
@@ -42,6 +42,7 @@ export function ReadingScreen(props: { file: File; data: AppData; onDone: (r: Re
       } catch (err) {
         warning = `Lettura non riuscita (${String((err as Error)?.message ?? err)}): compila i campi a mano.`;
       }
+      if (props.notice) warning = warning ? `${props.notice} ${warning}` : props.notice;
       if (!cancelled) props.onDone({ photoId, draft, warning });
     })();
     return () => {

@@ -11,6 +11,7 @@ import { MonthDesktop, NotePanel } from './ui/MonthDesktop';
 import { MonthScreen, monthGroups } from './ui/MonthScreen';
 import { NoteScreen } from './ui/NoteScreen';
 import { ReadingScreen } from './ui/ReadingScreen';
+import { ScanScreen } from './ui/ScanScreen';
 import { SettingsScreen } from './ui/SettingsScreen';
 import { useData } from './ui/useData';
 import './ui/fonts.css';
@@ -19,7 +20,8 @@ import './ui/styles.css';
 type PhoneTab = 'mese' | 'anticipi' | 'impostazioni';
 const PHONE_TAB_LABELS: Record<PhoneTab, string> = { mese: 'Mese', anticipi: 'Anticipi', impostazioni: 'Impostazioni' };
 type Overlay =
-  | { kind: 'reading'; file: File }
+  | { kind: 'scan'; file: File }
+  | { kind: 'reading'; file: Blob; notice?: string }
   | { kind: 'form'; existing?: Expense; photoId?: string | null; draft?: ReceiptDraft; warning?: string | null }
   | { kind: 'note'; recipient: Recipient }
   | null;
@@ -76,7 +78,8 @@ export function App() {
   // «Destinatari e tratte» esiste solo sul computer; sul telefono sta dentro Impostazioni.
   const phoneTab: PhoneTab = tab === 'destinatari' ? 'impostazioni' : tab;
 
-  const onPhoto = (file: File) => setOverlay({ kind: 'reading', file });
+  // Foto → scansione (ritaglio e raddrizzamento) → lettura → conferma. La foto originale non si conserva.
+  const onPhoto = (file: File) => setOverlay({ kind: 'scan', file });
   const onEdit = (existing: Expense) => {
     setSelectedExpense(existing.id);
     setOverlay({ kind: 'form', existing });
@@ -87,9 +90,18 @@ export function App() {
   // chiudendolo si ritrova lo scorrimento di prima.
   const overlays = (
     <>
+      {overlay?.kind === 'scan' ? (
+        <ScanScreen
+          key={overlay.file.lastModified + overlay.file.name + overlay.file.size}
+          file={overlay.file}
+          onDone={(image, notice) => setOverlay({ kind: 'reading', file: image, notice })}
+          onCancel={() => setOverlay(null)}
+        />
+      ) : null}
       {overlay?.kind === 'reading' ? (
         <ReadingScreen
           file={overlay.file}
+          notice={overlay.notice}
           data={data}
           onDone={(r) => setOverlay({ kind: 'form', photoId: r.photoId, draft: r.draft, warning: r.warning })}
         />
