@@ -63,7 +63,7 @@ describe('xlsx', () => {
     expect((ws.getCell(`G${t + 3}`).value as { formula: string }).formula).toBe(`G${t + 2}`);
   });
 
-  it('con il tema: logo, nome azienda, intestazione colorata e totali bordati', async () => {
+  it('con il tema: logo, nome azienda, intestazione con filetto d’accento, importi in grassetto e «Da rimborsare» in accento', async () => {
     const theme = parseThemeText(pub('esempi', 'tema-esempio.json').toString('utf8'));
     const logo = { dataUrl: 'data:image/png;base64,' + pub('icon-192.png').toString('base64'), format: 'PNG' as const, width: 192, height: 192 };
     const wb = await load(await buildXlsx(input('r-lunari', { theme, logo })));
@@ -71,11 +71,29 @@ describe('xlsx', () => {
     expect(ws.getImages()).toHaveLength(1);
     expect(wb.model.media?.length ?? 0).toBeGreaterThan(0);
     expect(ws.getCell('A1').value).toBe('Studio Aurora S.r.l.');
+    // intestazione: nessun riempimento, filetto d'accento sotto
     const head = ws.getCell(`A${HEADER_ROW}`);
-    expect((head.fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FF12474F');
-    expect(head.font?.color?.argb).toBe('FFFFFFFF');
+    expect((head.fill as ExcelJS.FillPattern | undefined)?.pattern ?? 'none').toBe('none');
+    expect(head.border?.bottom?.color?.argb).toBe('FFA85A2C');
+    expect(head.value).toBe('N.');
+    // righe: niente righe a strisce, filetti neutri; importi in grassetto
+    const first = HEADER_ROW + 1;
+    for (const r of [first, first + 1]) expect((ws.getCell(`B${r}`).fill as ExcelJS.FillPattern | undefined)?.pattern ?? 'none').toBe('none');
+    expect(ws.getCell(`G${first}`).font?.bold).toBe(true);
+    expect(ws.getCell(`B${first}`).border?.bottom?.style).toBe('thin');
+    // carattere del tema «avenir»
+    expect(ws.getCell(`D${first}`).font?.name).toBe('Avenir Next');
+    // totali: «Da rimborsare» in accento
     const t = HEADER_ROW + 1 + 5 + 1;
-    expect(ws.getCell(`G${t + 3}`).border?.top?.color?.argb).toBe('FFB86B3C');
+    expect(ws.getCell(`F${t + 3}`).font?.color?.argb).toBe('FF8A4A22');
+    expect(ws.getCell(`G${t + 3}`).font?.bold).toBe(true);
+    expect(ws.getCell(`G${t + 3}`).border?.top?.color?.argb).toBe('FFA85A2C');
     expect(ws.getCell(`G${t + 3}`).numFmt).toContain('€');
+  });
+
+  it('con il carattere di sistema non impone un carattere', async () => {
+    const wb = await load(await buildXlsx(input('r-lunari', { theme: { ...DEFAULT_THEME, font: 'system' } })));
+    const ws = wb.getWorksheet(SHEET_NAME)!;
+    expect(ws.getCell(`G${HEADER_ROW + 1}`).font?.name).not.toBe('Avenir Next');
   });
 });

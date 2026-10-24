@@ -5,7 +5,6 @@ import { suggestPayer } from '../payer';
 import { autoAmountCents, autoKm, formatDecimal, formatEuro, parseAmount } from '../money';
 import type { Category, Expense, Payer, ReadState, ReceiptDraft } from '../types';
 import { Field, Group, Segmented, Sheet, Switch, usePhotoUrl, val } from './common';
-import { IconChevronRight } from './icons';
 import type { AppData } from './useData';
 
 type ReadField = 'date' | 'amountCents' | 'supplier' | 'place' | 'category' | 'invoice';
@@ -18,6 +17,8 @@ export interface FormProps {
   draft?: ReceiptDraft;
   warning?: string | null;
   defaultDate: string;
+  // Sul computer: il destinatario scelto nella barra laterale, proposto per le spese nuove.
+  preferredRecipientId?: string | null;
   onSaved: () => void;
   onCancel: () => void;
 }
@@ -50,7 +51,9 @@ export function ExpenseForm(props: FormProps) {
       }
     } else {
       const date = draft?.date?.value ?? props.defaultDate;
-      const recipientId = suggestRecipient(data.expenses, date, data.recipients.find((r) => r.active)?.id ?? '');
+      const recipientId = props.preferredRecipientId && data.recipients.some((r) => r.id === props.preferredRecipientId)
+        ? props.preferredRecipientId
+        : suggestRecipient(data.expenses, date, data.recipients.find((r) => r.active)?.id ?? '');
       e = {
         id: newId(), date, recipientId, place: draft?.place?.value ?? '', supplier: draft?.supplier?.value ?? '',
         category: draft?.category?.value ?? (photoId ? 'pasto' : 'altro'), amountCents: draft?.amountCents?.value ?? 0,
@@ -157,13 +160,13 @@ export function ExpenseForm(props: FormProps) {
       {error ? <Group><div class="row two-line error-text" role="alert">{error}</div></Group> : null}
       {photoUrl ? (
         <>
-          <Group>
-            <button type="button" class="row two-line tap" onClick={() => setZoom(true)} aria-label="Ingrandisci la foto">
-              <img class="photo-thumb" src={photoUrl} alt="Foto dello scontrino" />
-              <span class="grow secondary-text">Tocca per ingrandire</span>
-              <IconChevronRight class="chev" />
-            </button>
-          </Group>
+          <button type="button" class="foto" onClick={() => setZoom(true)} aria-label="Ingrandisci la foto">
+            <img class="photo-thumb" src={photoUrl} alt="Foto dello scontrino" />
+            <span>
+              <span class="lbl">Giustificativo</span>
+              <span class="secondary-text">Letto sul dispositivo · tocca per ingrandire</span>
+            </span>
+          </button>
           {zoom ? (
             <div class="zoom" onClick={() => setZoom(false)} role="dialog" aria-label="Foto ingrandita">
               <img src={photoUrl} alt="Foto dello scontrino ingrandita" />
@@ -198,8 +201,8 @@ export function ExpenseForm(props: FormProps) {
             </select>
           </Field>
           <Switch label="Andata e ritorno" checked={roundTrip} onChange={setRoundTrip} />
-          <div class="row"><span class="grow">Km</span><span class="amount-plain">{km ?? '–'}</span></div>
-          <div class="row"><span class="grow">Importo</span><span class="amount">{autoCents != null ? formatEuro(autoCents) : '–'}</span></div>
+          <div class="row"><span class="grow lbl">Km</span><span class="amount-plain num">{km ?? '–'}</span></div>
+          <div class="row"><span class="grow lbl">Importo</span><span class="amount num">{autoCents != null ? formatEuro(autoCents) : '–'}</span></div>
         </Group>
       ) : (
         <Group>
@@ -221,7 +224,7 @@ export function ExpenseForm(props: FormProps) {
       <Group>
         <Switch label="C’è la fattura" checked={invoice} onChange={setInvoice} warn={warn('invoice')} />
         <div class={`row stack${payerWarn ? ' warn' : ''}`}>
-          <span class="row-label">Pagato con{payerWarn ? <small class="warn-tag">da controllare</small> : null}</span>
+          <span class="row-label lbl">Pagato con{payerWarn ? <small class="warn-tag">da controllare</small> : null}</span>
           <Segmented options={payerOptions} value={payer} onChange={choosePayer} label="Pagato con" />
         </div>
       </Group>
@@ -232,9 +235,8 @@ export function ExpenseForm(props: FormProps) {
         </label>
       </Group>
 
-      {existing ? (
-        <Group><button type="button" class="row tap destructive center" onClick={() => void remove()}>Elimina spesa</button></Group>
-      ) : null}
+      <button type="submit" class="salva">Salva la spesa</button>
+      {existing ? <button type="button" class="destructive-btn" onClick={() => void remove()}>Elimina spesa</button> : null}
     </Sheet>
   );
 }

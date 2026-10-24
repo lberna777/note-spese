@@ -33,6 +33,7 @@ export interface Settings {
   centsPerKm: number; // può avere decimali: 0,5891 €/km = 58.91
   headerName: string;
   lastBackupAt: string | null; // ISO
+  appearance?: 'auto' | 'light' | 'dark'; // assente = «auto» (segue il sistema)
 }
 
 export type ReadState = 'letta' | 'corretta' | 'manuale';

@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildBackup, importBackup, parseBackup } from './backup';
-import { closeDb, DB_NAME, getTheme, listExpenses, putTheme, readEverything } from './db';
+import { closeDb, DB_NAME, getSettings, getTheme, listExpenses, putSettings, putTheme, readEverything } from './db';
 import { DEFAULT_THEME } from './theme';
 
 afterEach(async () => {
@@ -56,6 +56,9 @@ describe('backup', () => {
     expect(f.version).toBe(2);
     expect(f).not.toHaveProperty('cards');
     expect(f.theme.companyName).toBe('Studio Aurora S.r.l.');
+    expect(f.theme.version).toBe(2);
+    expect(f.theme.light.bg).toBe(DEFAULT_THEME.light.bg);
+    expect(f.theme.dark).toEqual(DEFAULT_THEME.dark);
     expect(f.expenses.every((e: object) => !('cardId' in e))).toBe(true);
 
     // ripristino su un archivio dove il tema è stato tolto
@@ -63,6 +66,27 @@ describe('backup', () => {
     await importBackup(new Blob([text]), () => true);
     expect((await listExpenses()).length).toBe(before);
     expect((await getTheme()).companyName).toBe('Studio Aurora S.r.l.');
+  });
+
+  it('la scelta Automatico · Chiaro · Scuro entra nel backup e si ripristina', async () => {
+    await listExpenses();
+    await putSettings({ ...(await getSettings()), appearance: 'dark' });
+    const text = await (await buildBackup()).text();
+    expect(JSON.parse(text).settings.appearance).toBe('dark');
+    await putSettings({ ...(await getSettings()), appearance: 'light' });
+    await importBackup(new Blob([text]), () => true);
+    expect((await getSettings()).appearance).toBe('dark');
+  });
+
+  it('un backup con un tema v1 si importa e il tema si converte in v2', async () => {
+    const theme = {
+      format: 'note-spese-tema', version: 1, companyName: 'Studio Aurora S.r.l.', logo: '',
+      colors: { primary: '#12474f', accent: '#b86b3c', accentText: '#8a4a22', surface: '#f6f3ee', text: '#1d2a2c', textMuted: '#55666a' },
+    };
+    const d = parseBackup(JSON.stringify({ ...v1, version: 2, theme }));
+    expect(d.theme?.version).toBe(2);
+    expect(d.theme?.light.accent).toBe('#b86b3c');
+    expect(d.theme?.dark.bg).toBe('#0b0b0b');
   });
 
   it('rifiuta versioni sconosciute e temi non validi', () => {

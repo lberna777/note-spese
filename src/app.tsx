@@ -2,11 +2,13 @@ import { useEffect, useState } from 'preact/hooks';
 import { currentMonth, todayIso } from './labels';
 import { applyTheme } from './theme';
 import type { Expense, ReceiptDraft, Recipient } from './types';
-import { BrandBar } from './ui/BrandBar';
 import { AdvancesScreen } from './ui/AdvancesScreen';
+import { BrandBar } from './ui/BrandBar';
+import { Tabs, useMediaQuery } from './ui/common';
+import { DesktopSidebar, type DesktopTab } from './ui/DesktopSidebar';
 import { ExpenseForm } from './ui/ExpenseForm';
-import { Segmented } from './ui/common';
-import { MonthScreen } from './ui/MonthScreen';
+import { MonthDesktop, NotePanel } from './ui/MonthDesktop';
+import { MonthScreen, monthGroups } from './ui/MonthScreen';
 import { NoteScreen } from './ui/NoteScreen';
 import { ReadingScreen } from './ui/ReadingScreen';
 import { SettingsScreen } from './ui/SettingsScreen';
@@ -14,36 +16,41 @@ import { useData } from './ui/useData';
 import './ui/fonts.css';
 import './ui/styles.css';
 
-type Tab = 'mese' | 'anticipi' | 'impostazioni';
-const TAB_LABELS: Record<Tab, string> = { mese: 'Mese', anticipi: 'Anticipi', impostazioni: 'Impostazioni' };
+type PhoneTab = 'mese' | 'anticipi' | 'impostazioni';
+const PHONE_TAB_LABELS: Record<PhoneTab, string> = { mese: 'Mese', anticipi: 'Anticipi', impostazioni: 'Impostazioni' };
 type Overlay =
   | { kind: 'reading'; file: File }
   | { kind: 'form'; existing?: Expense; photoId?: string | null; draft?: ReceiptDraft; warning?: string | null }
   | { kind: 'note'; recipient: Recipient }
   | null;
 
+// Da questa larghezza l'app occupa tutto lo schermo con tre colonne (docs/design.md).
+export const DESKTOP_QUERY = '(min-width: 900px)';
+
 export function App() {
   const { data, reload, error } = useData();
-  const [tab, setTab] = useState<Tab>('mese');
+  const desktop = useMediaQuery(DESKTOP_QUERY);
+  const [tab, setTab] = useState<DesktopTab>('mese');
   const [month, setMonth] = useState(currentMonth());
   const [overlay, setOverlay] = useState<Overlay>(null);
-  const [compact, setCompact] = useState(false);
+  const [recipientId, setRecipientId] = useState<string | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<string | null>(null);
 
-  // Il tema (colori, caratteri, colore della barra del browser) si applica appena i dati sono pronti.
+  // Il tema e la scelta Automatico · Chiaro · Scuro si applicano appena i dati sono pronti; con Automatico
+  // si riapplicano quando il sistema cambia, per aggiornare il colore della barra del browser.
   const theme = data?.theme;
+  const appearance = data?.settings.appearance ?? 'auto';
   useEffect(() => {
-    if (theme) applyTheme(theme);
-  }, [theme]);
+    if (!theme) return;
+    applyTheme(theme, appearance);
+    if (appearance !== 'auto' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const on = () => applyTheme(theme, appearance);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [theme, appearance]);
 
-  // Titolo piccolo al centro della barra: compare quando il titolo grande esce dallo schermo.
-  useEffect(() => {
-    const onScroll = () => setCompact(window.scrollY > 32);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const goTab = (t: Tab) => {
+  const goTab = (t: DesktopTab) => {
     setTab(t);
     window.scrollTo(0, 0);
   };
@@ -52,8 +59,8 @@ export function App() {
   if (error && !data) {
     return (
       <div class="screen center">
-        <p class="group alert-box">{error}</p>
-        <button type="button" class="btn" onClick={() => location.reload()}>Ricarica</button>
+        <p class="alert-box">{error}</p>
+        <button type="button" class="btn-fill" onClick={() => location.reload()}>Ricarica</button>
       </div>
     );
   }
@@ -64,45 +71,22 @@ export function App() {
     setOverlay(null);
     await reload();
   };
-  const title = TAB_LABELS[tab];
+  const groups = monthGroups(data, month);
+  const group = groups.find((g) => g.r.id === recipientId) ?? groups[0] ?? null;
+  // «Destinatari e tratte» esiste solo sul computer; sul telefono sta dentro Impostazioni.
+  const phoneTab: PhoneTab = tab === 'destinatari' ? 'impostazioni' : tab;
 
-  // La schermata resta sotto: il foglio le sale sopra e, chiudendolo, si ritrova lo scorrimento di prima.
-  return (
+  const onPhoto = (file: File) => setOverlay({ kind: 'reading', file });
+  const onEdit = (existing: Expense) => {
+    setSelectedExpense(existing.id);
+    setOverlay({ kind: 'form', existing });
+  };
+  const onManual = () => setOverlay({ kind: 'form' });
+
+  // Il modulo sale sopra la schermata (foglio dal basso sul telefono, pannello a destra sul computer):
+  // chiudendolo si ritrova lo scorrimento di prima.
+  const overlays = (
     <>
-      <div class="app" aria-hidden={overlay ? true : undefined}>
-        <header class={`app-header${compact ? ' compact' : ''}`}>
-          <div class="bar-row">
-            <div class="bar-brand">{theme ? <BrandBar theme={theme} /> : null}</div>
-            <div class="bar-title" aria-hidden="true">{title}</div>
-          </div>
-          <div class="seg-row">
-            <Segmented
-              nav
-              label="Sezioni"
-              value={tab}
-              onChange={goTab}
-              options={(Object.keys(TAB_LABELS) as Tab[]).map((t) => ({ value: t, label: TAB_LABELS[t] }))}
-            />
-          </div>
-        </header>
-        <main>
-          <h1 class="large-title">{title}</h1>
-          {tab === 'mese' ? (
-            <MonthScreen
-              data={data}
-              month={month}
-              onMonth={setMonth}
-              onPhoto={(file) => setOverlay({ kind: 'reading', file })}
-              onManual={() => setOverlay({ kind: 'form' })}
-              onEdit={(existing) => setOverlay({ kind: 'form', existing })}
-              onNote={(recipient) => setOverlay({ kind: 'note', recipient })}
-              onGoSettings={() => goTab('impostazioni')}
-            />
-          ) : null}
-          {tab === 'anticipi' ? <AdvancesScreen data={data} month={month} onMonth={setMonth} /> : null}
-          {tab === 'impostazioni' ? <SettingsScreen data={data} reload={reload} /> : null}
-        </main>
-      </div>
       {overlay?.kind === 'reading' ? (
         <ReadingScreen
           file={overlay.file}
@@ -119,6 +103,7 @@ export function App() {
           draft={overlay.draft}
           warning={overlay.warning}
           defaultDate={defaultDate}
+          preferredRecipientId={desktop ? group?.r.id ?? null : null}
           onSaved={() => void close()}
           onCancel={() => void close()}
         />
@@ -126,6 +111,75 @@ export function App() {
       {overlay?.kind === 'note' ? (
         <NoteScreen data={data} recipient={overlay.recipient} month={month} onClose={() => void close()} />
       ) : null}
+    </>
+  );
+
+  if (desktop) {
+    return (
+      <>
+        <div class="pc" aria-hidden={overlay ? true : undefined}>
+          <DesktopSidebar
+            theme={data.theme}
+            tab={tab}
+            onTab={goTab}
+            month={month}
+            onMonth={setMonth}
+            groups={groups}
+            selectedId={group?.r.id ?? null}
+            onSelect={setRecipientId}
+            lastBackupAt={data.settings.lastBackupAt}
+          />
+          {tab === 'mese' ? (
+            <>
+              <MonthDesktop data={data} month={month} group={group} selectedId={selectedExpense} onPhoto={onPhoto} onManual={onManual} onEdit={onEdit} />
+              <NotePanel data={data} month={month} group={group} onEdit={onEdit} />
+            </>
+          ) : (
+            <main class="pc-main wide">
+              {tab === 'anticipi' ? <AdvancesScreen data={data} month={month} onMonth={setMonth} desktop /> : null}
+              {tab === 'destinatari' ? <SettingsScreen data={data} reload={reload} part="lists" desktop /> : null}
+              {tab === 'impostazioni' ? <SettingsScreen data={data} reload={reload} part="general" desktop /> : null}
+            </main>
+          )}
+        </div>
+        {overlays}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div class="app" aria-hidden={overlay ? true : undefined}>
+        <header class="ph-header">
+          <div class="ph-top">
+            <BrandBar theme={data.theme} />
+            <span class="lbl">Note spese</span>
+          </div>
+          <Tabs
+            label="Sezioni"
+            value={phoneTab}
+            onChange={goTab}
+            options={(Object.keys(PHONE_TAB_LABELS) as PhoneTab[]).map((t) => ({ value: t, label: PHONE_TAB_LABELS[t] }))}
+          />
+        </header>
+        <main>
+          {phoneTab === 'mese' ? (
+            <MonthScreen
+              data={data}
+              month={month}
+              onMonth={setMonth}
+              onPhoto={onPhoto}
+              onManual={onManual}
+              onEdit={onEdit}
+              onNote={(recipient) => setOverlay({ kind: 'note', recipient })}
+              onGoSettings={() => goTab('impostazioni')}
+            />
+          ) : null}
+          {phoneTab === 'anticipi' ? <AdvancesScreen data={data} month={month} onMonth={setMonth} desktop={false} /> : null}
+          {phoneTab === 'impostazioni' ? <SettingsScreen data={data} reload={reload} part="all" desktop={false} /> : null}
+        </main>
+      </div>
+      {overlays}
     </>
   );
 }

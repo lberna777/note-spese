@@ -28,33 +28,49 @@ lasciano mai il telefono, salvo il file che l'utente sceglie di esportare o cond
   la carta personale, e riepilogo degli anticipi da farsi rimborsare.
 - Nota spese per destinatario in PDF (con i giustificativi in coda) e in Excel (con formule),
   salvataggio e ripristino di una copia di sicurezza.
-- Tema grafico importabile (vedi sotto).
+- Tema grafico importabile (vedi sotto), chiaro e scuro; telefono e computer a tutto schermo
+  (da 900 px: barra laterale, tabella, pannello della nota; niente fotocamera, si carica un'immagine).
 - Su iPhone e iPad, se l'app non è ancora sulla schermata Home, un riquadro chiudibile spiega
   come aggiungerla (altrimenti Safari può cancellare i dati del sito).
 
 ## Tema importabile
 
-Nome, logo e colori dell'azienda non stanno nel codice: si caricano da un file `.json` in
-Impostazioni → Aspetto → «Importa tema» e restano solo nel telefono (IndexedDB, e nel backup).
-«Torna al tema predefinito» ripristina i colori neutri. Il tema colora l'app, il PDF e l'Excel.
+Nome, logo, carattere e colori dell'azienda non stanno nel codice: si caricano da un file `.json` in
+Impostazioni → Aspetto → «Importa tema» e restano solo nel dispositivo (IndexedDB, e nel backup).
+«Torna al tema predefinito» ripristina il tema neutro (grafite e blu). Il tema colora l'app, il PDF
+e l'Excel. In Impostazioni → Aspetto si sceglie anche Automatico · Chiaro · Scuro (Automatico segue
+il sistema). Il PDF usa sempre la variante chiara.
 
 ```json
-{ "format": "note-spese-tema", "version": 1,
-  "companyName": "Nome dell'azienda", "logo": "data:image/png;base64,…",
-  "colors": { "primary": "#RRGGBB", "accent": "#RRGGBB", "accentText": "#RRGGBB",
-              "surface": "#RRGGBB", "text": "#RRGGBB", "textMuted": "#RRGGBB" },
-  "fonts": { "heading": "serif", "body": "sans" } }
+{ "format": "note-spese-tema", "version": 2,
+  "companyName": "Nome dell'azienda", "shortName": "Nome breve", "logo": "data:image/png;base64,…",
+  "font": "avenir",
+  "light": { "bg": "#RRGGBB", "surface": "#RRGGBB", "text": "#RRGGBB", "textMuted": "#RRGGBB",
+             "line": "#RRGGBBAA", "lineAccent": "#RRGGBBAA", "accent": "#RRGGBB",
+             "accentText": "#RRGGBB", "onAccent": "#RRGGBB" },
+  "dark":  { "…": "stesse chiavi" } }
 ```
 
-- `primary`: colore scuro delle fasce (intestazioni, barra); `accent`: colore del marchio per
-  filetti e dettagli; `accentText`: variante dell'accento leggibile come testo su `surface`;
-  `surface`: fondo chiaro.
-- `logo`: data URL PNG, JPEG o SVG, al massimo 500 KB (facoltativo). Colori in `#RRGGBB`, testi
-  al massimo 120 caratteri.
-- `fonts.heading`: `serif` (Bodoni Moda; Times nel PDF) o `system`; `fonts.body`: `sans` (Inter)
-  o `system`. I caratteri sono serviti dall'app, senza servizi esterni.
+- `bg` fondo pagina; `surface` moduli e pannelli; `line` filetti neutri; `lineAccent` filetti
+  d'accento; `accent` riempimenti (pulsanti); `accentText` accento usato come testo, leggibile su
+  `bg`; `onAccent` testo sopra `accent`. Colori `#RRGGBB` o `#RRGGBBAA`.
+- `logo`: data URL PNG, JPEG o SVG, al massimo 500 KB (facoltativo); testi al massimo 120 caratteri.
+  Il logo sta su entrambi i fondi (chiaro e scuro): va scelto di conseguenza.
+- `font`: `avenir` (Avenir Next / Avenir dove installati, altrimenti Nunito Sans, incluso nell'app;
+  nel PDF si incorpora sempre Nunito Sans) o `system` (carattere di sistema).
+- Un tema della versione 1 (`colors`, `fonts`) si importa ancora e viene convertito: la variante
+  chiara viene dai colori vecchi, quella scura è derivata.
+- Contrasto minimo 4,5:1 per testo, testo smorzato, accento come testo e testo sull'accento: i test
+  lo verificano sul tema neutro e su quello d'esempio.
 
 Un tema d'esempio, tutto inventato, è `public/esempi/tema-esempio.json` («Studio Aurora S.r.l.»).
+
+## Caratteri del PDF
+
+`scripts/woff-to-ttf.mjs` converte i `.woff` di Nunito Sans (pacchetto `@fontsource/nunito-sans`,
+pesi 300, 400, 600) in TTF e li salva in `src/export/fonts/` con `OFL.txt`; i TTF sono nel
+repository e si incorporano in jsPDF solo quando si genera il PDF. Per rigenerarli:
+`node scripts/woff-to-ttf.mjs`.
 
 ## Avvio
 
@@ -95,6 +111,6 @@ In `public/esempi/` ci sono tre scontrini finti e il tema d'esempio. Per vedere 
 | jspdf-autotable | tabelle nel PDF | MIT |
 | ExcelJS | generazione Excel | MIT |
 | idb | accesso a IndexedDB | ISC |
-| Bodoni Moda, Inter (Fontsource) | caratteri del tema | OFL-1.1 |
+| Nunito Sans (Fontsource) | carattere dell'app e del PDF | OFL-1.1 |
 
 Il progetto è scritto in TypeScript e costruito con Vite; i test usano Vitest.

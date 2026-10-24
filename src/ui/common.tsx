@@ -8,33 +8,47 @@ export function val(e: Event): string {
   return (e.target as HTMLInputElement).value;
 }
 
-// Gruppo di righe in stile iOS (inset grouped), con intestazione e nota a piè di gruppo facoltative.
+// Vero se la finestra rispetta la media query (aggiornato quando cambia). Serve a scegliere tra telefono e computer.
+export function useMediaQuery(query: string): boolean {
+  const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false);
+  const [matches, setMatches] = useState(get);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setMatches(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [query]);
+  return matches;
+}
+
+// Sezione: titolo in maiuscoletto, filetto d'accento in alto, righe separate da filetti neutri.
 export function Group(props: { title?: string; footer?: string; children: ComponentChildren; class?: string }) {
   return (
     <section class="group-wrap">
-      {props.title ? <h2 class="group-title">{props.title}</h2> : null}
+      {props.title ? <h2 class="group-title lbl">{props.title}</h2> : null}
       <div class={`group${props.class ? ` ${props.class}` : ''}`}>{props.children}</div>
       {props.footer ? <p class="group-foot">{props.footer}</p> : null}
     </section>
   );
 }
 
-// Riga di modulo: etichetta a sinistra, valore (campo) a destra.
+// Riga di modulo: etichetta in maiuscoletto a sinistra, valore (campo) a destra.
 export function Field(props: { label: string; warn?: boolean; children: ComponentChildren; hint?: string; select?: boolean }) {
   return (
     <label class={`row field${props.warn ? ' warn' : ''}${props.select ? ' has-select' : ''}`}>
-      <span class="row-label">{props.label}{props.warn ? <small class="warn-tag">da controllare</small> : null}</span>
+      <span class="row-label lbl">{props.label}{props.warn ? <small class="warn-tag">da controllare</small> : null}</span>
       {props.children}
       {props.hint ? <span class="row-hint">{props.hint}</span> : null}
     </label>
   );
 }
 
-// Interruttore iOS. L'area di tocco (51 x 44) è l'input trasparente sopra il disegno.
+// Interruttore. L'area di tocco (51 x 44) è l'input trasparente sopra il disegno.
 export function Switch(props: { label: string; checked: boolean; onChange: (v: boolean) => void; warn?: boolean }) {
   return (
     <label class={`row${props.warn ? ' warn' : ''}`}>
-      <span class="row-label grow">{props.label}{props.warn ? <small class="warn-tag">da controllare</small> : null}</span>
+      <span class="row-label lbl grow">{props.label}{props.warn ? <small class="warn-tag">da controllare</small> : null}</span>
       <span class="switch">
         <input
           type="checkbox"
@@ -49,35 +63,51 @@ export function Switch(props: { label: string; checked: boolean; onChange: (v: b
   );
 }
 
-// Controllo a segmenti di larghezza uguale. `nav`: sezioni dell'app; altrimenti scelta tra due valori.
+// Scelta tra poche voci, a riquadri affiancati; quella attiva è piena d'accento.
 export function Segmented<T extends string>(props: {
   options: { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
   label: string;
-  nav?: boolean;
 }) {
-  const Tag = props.nav ? 'nav' : 'div';
   return (
-    <Tag class="segmented" aria-label={props.label} role={props.nav ? undefined : 'group'}>
+    <div class="segmented" aria-label={props.label} role="group">
       {props.options.map((o) => (
         <button
           type="button"
           key={o.value}
           class={props.value === o.value ? 'on' : ''}
-          aria-current={props.nav && props.value === o.value ? 'page' : undefined}
-          aria-pressed={props.nav ? undefined : props.value === o.value}
+          aria-pressed={props.value === o.value}
           onClick={() => props.onChange(o.value)}
         >
           {o.label}
         </button>
       ))}
-    </Tag>
+    </div>
   );
 }
 
-// Foglio che sale dal basso: «Annulla» a sinistra, titolo al centro, azione a destra in grassetto.
-// Con `onSubmit` il foglio è un modulo e l'azione a destra lo invia.
+// Menu del telefono: voci in maiuscoletto, filetto d'accento sotto quella attiva.
+export function Tabs<T extends string>(props: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void; label: string }) {
+  return (
+    <nav class="ph-tabs" aria-label={props.label}>
+      {props.options.map((o) => (
+        <button
+          type="button"
+          key={o.value}
+          class={props.value === o.value ? 'on' : ''}
+          aria-current={props.value === o.value ? 'page' : undefined}
+          onClick={() => props.onChange(o.value)}
+        >
+          <span>{o.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+// Modulo: sul telefono sale dal basso («Annulla» a sinistra, titolo al centro, azione a destra); sul computer
+// il CSS lo mette come pannello a destra. Con `onSubmit` è un form e l'azione a destra lo invia.
 export function Sheet(props: {
   title: string;
   onClose: () => void;
@@ -103,9 +133,8 @@ export function Sheet(props: {
   const Tag = props.onSubmit ? 'form' : 'div';
   const formProps = props.onSubmit ? { onSubmit: props.onSubmit } : {};
   return (
-    <div class="sheet-backdrop">
+    <div class="sheet-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && window.matchMedia?.('(min-width: 900px)').matches) props.onClose(); }}>
       <div class="sheet" role="dialog" aria-modal="true" aria-label={props.title}>
-        <div class="sheet-grab" aria-hidden="true" />
         <Tag class="sheet-inner" {...formProps}>
           <header class="sheet-bar">
             <button type="button" class="bar-btn left" onClick={props.onClose}>{props.closeLabel ?? 'Annulla'}</button>
@@ -123,12 +152,31 @@ export function Sheet(props: {
   );
 }
 
+// «‹ Ottobre 2026 ›» tra due filetti d'accento.
 export function MonthPicker(props: { month: string; onChange: (m: string) => void }) {
   return (
-    <div class="month-picker">
-      <button type="button" class="icon-btn" aria-label="Mese precedente" onClick={() => props.onChange(shiftMonth(props.month, -1))}><IconChevronLeft /></button>
-      <strong>{monthLabel(props.month)}</strong>
-      <button type="button" class="icon-btn" aria-label="Mese successivo" onClick={() => props.onChange(shiftMonth(props.month, 1))}><IconChevronRight /></button>
+    <div class="mese-nav">
+      <button type="button" class="icon-btn" aria-label="Mese precedente" onClick={() => props.onChange(shiftMonth(props.month, -1))}><IconChevronLeft size={18} /></button>
+      <strong class="m">{monthLabel(props.month)}</strong>
+      <button type="button" class="icon-btn" aria-label="Mese successivo" onClick={() => props.onChange(shiftMonth(props.month, 1))}><IconChevronRight size={18} /></button>
+    </div>
+  );
+}
+
+// Titolo grande e leggero con, sotto, una riga in maiuscoletto; a destra, se serve, le frecce del mese.
+export function ScreenTitle(props: { title: string; sub?: string; month?: string; onMonth?: (m: string) => void }) {
+  return (
+    <div class="ph-title">
+      <div class="title-row">
+        <h1>{props.title}</h1>
+        {props.month && props.onMonth ? (
+          <div class="title-arrows">
+            <button type="button" class="icon-btn" aria-label="Mese precedente" onClick={() => props.onMonth!(shiftMonth(props.month!, -1))}><IconChevronLeft size={20} /></button>
+            <button type="button" class="icon-btn" aria-label="Mese successivo" onClick={() => props.onMonth!(shiftMonth(props.month!, 1))}><IconChevronRight size={20} /></button>
+          </div>
+        ) : null}
+      </div>
+      {props.sub ? <div class="sub lbl">{props.sub}</div> : null}
     </div>
   );
 }

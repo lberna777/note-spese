@@ -22,6 +22,11 @@ export function kindLabel(kind: RecipientKind, theme: Pick<Theme, 'shortName' | 
 
 export const PAYER_LABELS: Record<Payer, string> = { azienda: 'Carta aziendale', personale: 'Carta personale' };
 
+// Forma breve per elenchi e tabelle.
+export const PAYER_SHORT: Record<Payer, string> = { azienda: 'Aziendale', personale: 'Personale' };
+
+export const APPEARANCE_LABELS = { auto: 'Automatico', light: 'Chiaro', dark: 'Scuro' } as const;
+
 const MONTHS = [
   'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
   'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre',

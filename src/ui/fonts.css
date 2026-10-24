@@ -1,43 +1,22 @@
-/* Caratteri serviti dall'app (licenza OFL, niente servizi esterni): solo l'alfabeto latino e i pesi usati. */
+/* Nunito Sans serve da ripiego di Avenir Next (licenza OFL, nessun servizio esterno): solo latino, tre pesi. */
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Nunito Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('../../node_modules/@fontsource/nunito-sans/files/nunito-sans-latin-300-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito Sans';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../../node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2') format('woff2');
+  src: url('../../node_modules/@fontsource/nunito-sans/files/nunito-sans-latin-400-normal.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Nunito Sans';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../../node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('../../node_modules/@fontsource/inter/files/inter-latin-700-normal.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Bodoni Moda';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('../../node_modules/@fontsource/bodoni-moda/files/bodoni-moda-latin-400-normal.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Bodoni Moda';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('../../node_modules/@fontsource/bodoni-moda/files/bodoni-moda-latin-600-normal.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Bodoni Moda';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('../../node_modules/@fontsource/bodoni-moda/files/bodoni-moda-latin-700-normal.woff2') format('woff2');
+  src: url('../../node_modules/@fontsource/nunito-sans/files/nunito-sans-latin-600-normal.woff2') format('woff2');
 }

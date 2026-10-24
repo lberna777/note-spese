@@ -25,15 +25,20 @@ function input(over: Partial<ExportInput> = {}): ExportInput {
 const text = async (b: Blob) => Buffer.from(await b.arrayBuffer()).toString('latin1');
 const pageCount = (raw: string) => (raw.match(/\/Type\s*\/Page\b(?!s)/g) ?? []).length;
 
+const SYSTEM = { ...DEFAULT_THEME, font: 'system' as const };
+
 describe('pdf', () => {
-  it('genera un PDF non vuoto con il tema neutro', async () => {
-    const blob = await buildPdf(input());
+  it('con il carattere di sistema genera un PDF non vuoto in Helvetica, con il testo leggibile', async () => {
+    const blob = await buildPdf(input({ theme: SYSTEM }));
     expect(blob.size).toBeGreaterThan(1000);
     const raw = await text(blob);
     expect(raw.slice(0, 5)).toBe('%PDF-');
     expect(raw).toContain('Carta aziendale');
     expect(raw).toContain('Pagato con carta aziendale');
     expect(raw).toContain('Anticipato con carta personale');
+    expect(raw).toContain('Da rimborsare');
+    expect(raw).toContain('/Helvetica');
+    expect(raw).not.toContain('/FontFile2');
     expect(raw).not.toMatch(/\*{4}/);
     expect(raw).toContain('pagina 1 di 1');
   });
@@ -42,19 +47,36 @@ describe('pdf', () => {
     const base = input();
     const photo = new Blob([pub('esempi', 'scontrino-trattoria.png')], { type: 'image/png' });
     const photos = new Map([[base.totals.rows[0].id, photo], [base.totals.rows[2].id, photo], [base.totals.rows[3].id, photo]]);
-    const blob = await buildPdf({ ...base, theme: exampleTheme(), logo: pngLogo(), photos });
+    const blob = await buildPdf({ ...base, theme: { ...exampleTheme(), font: 'system' }, logo: pngLogo(), photos });
     const raw = await text(blob);
     expect(raw.slice(0, 5)).toBe('%PDF-');
     const pages = pageCount(raw);
     expect(pages).toBe(3); // nota + due pagine di giustificativi (3 foto, due per pagina)
     for (let p = 1; p <= pages; p++) expect(raw).toContain(`pagina ${p} di ${pages}`);
-    expect(raw).toContain('Studio Aurora S.r.l.');
-    expect(raw).toContain('/Times-Bold');
-    expect(raw).toContain('Giustificativi');
+    expect(raw).toContain('STUDIO AURORA S.R.L.');
+    expect(raw).toContain('GIUSTIFICATIVI');
   });
 
   it('con il tema d’esempio ma senza logo (SVG non rasterizzabile) non va in errore', async () => {
     const blob = await buildPdf(input({ theme: exampleTheme(), logo: null }));
     expect(blob.size).toBeGreaterThan(1000);
+  });
+
+  it('con il tema «avenir» incorpora Nunito Sans (TrueType) nel PDF', async () => {
+    const blob = await buildPdf(input({ theme: exampleTheme(), logo: pngLogo() }));
+    const raw = await text(blob);
+    expect(raw.slice(0, 5)).toBe('%PDF-');
+    expect(raw).toContain('/FontFile2');
+    expect(raw).toMatch(/\/BaseFont\s*\/[A-Z]{6}\+NunitoSans|\/BaseFont\s*\/NunitoSans/);
+    expect(raw).toContain('NunitoSansLight');
+    // tre file di carattere incorporati (leggero, normale, grassetto); il PDF supera la somma dei loro byte
+    expect((raw.match(/\/FontFile2/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect(blob.size).toBeGreaterThan(90_000);
+  });
+
+  it('il PDF usa sempre la variante chiara anche se il tema scuro è molto diverso', async () => {
+    const t = exampleTheme();
+    const raw = await text(await buildPdf(input({ theme: { ...t, font: 'system', dark: { ...t.dark, text: '#ff0000' } } })));
+    expect(raw).not.toContain('1 0 0 rg'); // il rosso del tema scuro non compare
   });
 });

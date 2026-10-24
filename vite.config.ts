@@ -1,12 +1,27 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
+import { defineConfig, type Plugin } from 'vite';
 import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+// `import x from './font.ttf?base64'` restituisce il file come testo base64: i caratteri del PDF stanno
+// nel pacchetto JavaScript caricato solo quando si genera il PDF, senza richieste di rete.
+function ttfBase64(): Plugin {
+  return {
+    name: 'ttf-base64',
+    enforce: 'pre',
+    load(id) {
+      if (!id.endsWith('.ttf?base64')) return null;
+      return `export default ${JSON.stringify(readFileSync(id.slice(0, -'?base64'.length)).toString('base64'))};`;
+    },
+  };
+}
 
 export default defineConfig({
   // Percorsi relativi: la demo funziona anche pubblicata in una sottocartella (GitHub Pages).
   base: './',
   plugins: [
+    ttfBase64(),
     preact(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -19,8 +34,8 @@ export default defineConfig({
         display: 'standalone',
         start_url: './',
         scope: './',
-        background_color: '#f4f5f7',
-        theme_color: '#1f3a5f',
+        background_color: '#f6f7f9',
+        theme_color: '#f6f7f9',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },

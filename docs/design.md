@@ -1,68 +1,84 @@
-# Design — come su iPhone
+# Design
 
-L'app si usa soprattutto da iPhone, aggiunta alla schermata Home: deve sembrare un'app di iOS.
-Questo documento traduce in regole per una PWA le Human Interface Guidelines di Apple (HIG),
-lette il 2026-10-23 su developer.apple.com/design/human-interface-guidelines (pagine *Layout*,
-*Toolbars*, *Tab bars*, *Segmented controls*, *Buttons*, *Color*, *Typography*, *Materials*).
-Le citazioni sono tradotte; ciò che non viene dalle HIG è segnato come scelta nostra.
+Seconda stesura, 2026-10-24. Sostituisce la prima, che seguiva alla lettera l'aspetto standard di
+iOS e ne usciva un modulo generico. Ora l'app ha un'**identità editoriale** che prende carattere,
+colori e logo dal tema dell'azienda, e resta comoda su iPhone secondo le Human Interface Guidelines
+di Apple (HIG, lette il 2026-10-23 su developer.apple.com: *Layout*, *Toolbars*, *Buttons*,
+*Color*, *Typography*, *Materials*).
 
-## Struttura delle schermate
+## Principi
 
-| Zona | Cosa contiene | Regola HIG |
-| --- | --- | --- |
-| **In alto** | Marchio del tema (se c'è), titolo grande della sezione, controllo a segmenti **Mese · Anticipi · Impostazioni** | Un controllo a segmenti offre «scelte strettamente collegate che riguardano un oggetto, uno stato o una vista»; su iPhone «non più di circa cinque segmenti», di larghezza uguale |
-| **Contenuto** | Elenchi a gruppi con angoli arrotondati | Raggruppare gli elementi collegati con spazio, forme contenitore o separatori |
-| **In basso** | Barra degli strumenti con le azioni per aggiungere spese: **Fotografa** (azione principale), **Galleria**, **Senza scontrino** | Una toolbar «agisce sul contenuto della vista»; le azioni non vanno nella barra di navigazione tra sezioni |
+1. **Una griglia sola.** Barra in alto, contenuti e pulsanti condividono gli stessi margini e la
+   stessa larghezza massima: niente fasce più larghe dei contenuti.
+2. **Tipografia, filetti e spazio, non scatole.** Niente schede arrotondate né ombre: sezioni
+   separate da filetti sottili, etichette piccole in maiuscoletto spaziato, titoli grandi e
+   leggeri, cifre importanti in grassetto con cifre tabellari.
+3. **Colonne fisse.** In ogni riga l'importo sta sempre allo stesso filo a destra, la data sempre
+   sotto l'importo; i totali stanno in un blocco proprio, non sembrano altre spese.
+4. **L'accento solo dove serve.** Il colore del marchio va su ciò che si tocca (pulsanti, scelta
+   attiva) e sulle cifre «da rimborsare». Le HIG: se il colore del marchio indica che un elemento
+   si tocca, usarlo anche sul testo che non si tocca «confonde».
+5. **Chiaro e scuro**, entrambi curati: si sceglie in Impostazioni (Automatico · Chiaro · Scuro).
 
-*Scelta nostra, su richiesta del committente*: la navigazione tra le tre sezioni sta in alto, come
-controllo a segmenti, e non in una tab bar in basso, che sarebbe la soluzione abituale di iOS.
-Così il pollice trova in basso solo le azioni per aggiungere spese, che sono le più frequenti. La
-barra in basso compare solo nella sezione Mese, perché agisce su quella vista.
+## Telefono (larghezza < 900 px)
 
-## Regole
-
-- **Area sicura**: niente testo o controlli sotto la Dynamic Island o la barra della Home
-  («Adhere to the screen's safe area»). In CSS: `viewport-fit=cover` e `env(safe-area-inset-*)`.
-- **Bersagli di tocco**: almeno 44 × 44 pt («a button needs a hit region of at least 44x44 pt»).
-  Righe degli elenchi alte almeno 44 pt.
-- **Margini**: 16 pt ai lati su iPhone, come i margini standard di sistema.
-- **Un'azione in evidenza per vista**: «Keep the number of prominent buttons to one or two per
-  view». In Mese l'azione in evidenza è Fotografa (pulsante circolare pieno nel colore d'accento);
-  Galleria e Senza scontrino sono secondari. Nei moduli l'azione in evidenza è Salva.
-- **Barre senza fondi pieni**: «Reduce the use of toolbar backgrounds and tinted controls»; il
-  contenuto scorre sotto le barre, che lo sfocano (in CSS `backdrop-filter: blur()` su un fondo
-  semitrasparente). Liquid Glass non si usa nel contenuto («Don't use Liquid Glass in the content
-  layer»): l'effetto vetro resta alle due barre.
-- **Colore**: colori di sistema per testi e fondi, colore del marchio come accento degli elementi
-  interattivi. Le HIG: in un'app dai contenuti per lo più monocromatici, usare il colore del
-  marchio come accento «può essere un modo efficace» di riflettere l'identità dell'azienda; e se il
-  colore del marchio indica che un pulsante si tocca, lo stesso colore sul testo non interattivo
-  «confonde». Quindi l'accento del tema si usa **solo** per ciò che si tocca.
-- **Contrasto**: almeno 4,5:1 per il testo normale, 3:1 per testo grande e icone. Con un accento
-  che su fondo chiaro non arriva a 4,5 (succede spesso con oro, rame, arancio), il testo dei link usa la variante
-  `accentText` del tema; il pulsante pieno usa l'accento con testo o icona bianchi in grassetto.
-- **Caratteri**: testo e interfaccia nel carattere di sistema (`-apple-system`, cioè SF Pro su
-  iPhone), corpo 17 pt, minimo 11 pt (tabella *Typography*). Un carattere del marchio solo per i
-  titoli grandi, se il tema lo chiede. Rispettare la dimensione del testo scelta dall'utente.
-- **Tema scuro e preferenze**: supporto a tema scuro, `prefers-contrast: more` e
-  `prefers-reduced-motion` e `prefers-reduced-transparency` (niente sfocature, fondi pieni).
-
-## Componenti
-
-| Componente | Aspetto |
+| Zona | Contenuto |
 | --- | --- |
-| Titolo grande | 34 pt grassetto, allineato a sinistra; si riduce a titolo piccolo centrato nella barra in alto quando si scorre |
-| Controllo a segmenti | Capsula grigia (`rgba(118,118,128,.12)`), segmento scelto bianco con ombra leggera (scuro: `#636366`); testo 13–15 pt semibold |
-| Elenco a gruppi | Fondo della pagina `#F2F2F7` (scuro `#000`), gruppi bianchi (scuro `#1C1C1E`) con raggio 10–12 pt, separatori sottili rientrati di 16 pt, freccia `›` grigia sulle righe che si aprono |
-| Riga spesa | Fornitore (17 pt), sotto tipologia · carta · fattura (15 pt, grigio secondario), importo a destra (17 pt semibold, cifre tabellari) |
-| Foglio (sheet) | Modulo che sale dal basso con maniglia; in alto «Annulla» a sinistra, titolo al centro, «Salva» a destra in grassetto nel colore d'accento |
-| Interruttori | Stile iOS (per «C'è la fattura») |
-| Scelta della carta | Controllo a segmenti a due voci: Carta aziendale · Carta personale |
-| Azioni distruttive | Rosso di sistema `#FF3B30`, mai come azione in evidenza |
-| Icone | Disegnate da noi in SVG, a tratto, nello spirito di SF Symbols (le icone SF Symbols sono di Apple e non si copiano) |
+| In alto, fissa | Logo del tema a sinistra; sotto, il menu **Mese · Anticipi · Impostazioni** come tre voci in maiuscoletto con un filetto d'accento sotto la voce attiva (come il menu di un sito, non un controllo a segmenti grigio) |
+| Titolo | Mese in grande e leggero (30 px, peso 300); sotto, «15 spese · 3 destinatari» in maiuscoletto |
+| Riepilogo | Striscia a tre colonne tra due filetti: Totale · Azienda · Anticipi (l'ultima nel colore d'accento) |
+| Destinatari | Una sezione per destinatario: nome in maiuscoletto d'accento e tipo a destra; righe spesa; «Da rimborsare» in fondo; pulsante «Nota spese» a filo |
+| In basso, fissa | Galleria · **Fotografa** (cerchio pieno d'accento, unica azione in evidenza) · Senza foto. La barra ha un fondo pieno (o sfocato e quasi opaco): il contenuto non deve leggersi sotto le icone |
 
-## Tema
+## Computer (larghezza ≥ 900 px), a tutto schermo
 
-Il tema importato (vedi README) fornisce marchio e accento; la struttura sopra non cambia. Con il
-tema: logo e nome in cima, accento e `accentText` per ciò che si tocca, carattere dei titoli
-grandi. Senza tema: accento blu di sistema (`#007AFF`, scuro `#0A84FF`).
+Tre colonne a tutta altezza: **barra laterale** 248 px · **contenuto** elastico · **pannello della
+nota** 320 px (sotto i 1200 px il pannello scende sotto la tabella).
+
+| Colonna | Contenuto |
+| --- | --- |
+| Laterale | Logo; menu verticale (Mese · Anticipi · Destinatari e tratte · Impostazioni) con filetto d'accento sotto la voce attiva; selettore del mese; **destinatari del mese** con il loro totale: se ne sceglie uno; in fondo la data dell'ultimo backup |
+| Contenuto | Destinatario e tipo in maiuscoletto, mese in grande; a destra **Carica scontrino** (immagine dal disco, letta come sul telefono) e **Nuova spesa** (in evidenza); quattro riquadri Totale · Carta aziendale · Carta personale · Da rimborsare; **tabella** con colonne Data · Fornitore · Località · Tipologia · Km · Importo · Fattura · Pagato con, intestazione con filetto d'accento, riga selezionata evidenziata |
+| Pannello | «Nota spese del mese»: totali, **Scarica il PDF** (in evidenza), Scarica l'Excel, miniature dei giustificativi con quelli mancanti segnalati |
+
+Sul computer **non c'è la fotocamera**: si carica un'immagine già salvata. I moduli (nuova spesa,
+modifica, conferma dopo la lettura) si aprono come pannello a destra o finestra centrata, non come
+foglio dal basso.
+
+## Regole HIG che restano
+
+- **Area sicura** su iPhone: `viewport-fit=cover` e `env(safe-area-inset-*)`.
+- **Bersagli di tocco** di almeno 44 × 44 pt; righe di almeno 44 pt.
+- **Un'azione in evidenza per vista** (Fotografa nel Mese, Salva nei moduli, Scarica il PDF nella
+  nota): «Keep the number of prominent buttons to one or two per view».
+- **Contrasto** almeno 4,5:1 per il testo normale, 3:1 per testo grande e icone. Sui pulsanti
+  pieni d'accento il testo è scuro (`onAccent` del tema), non bianco, se il bianco non arriva a 4,5.
+- **Testo**: corpo 16–17 px, mai sotto 11 px; `prefers-reduced-motion`,
+  `prefers-reduced-transparency`, `prefers-contrast: more` rispettati.
+
+## Caratteri
+
+Il tema dice quale famiglia usare. `avenir` significa: **Avenir Next / Avenir** dove sono già
+installati (iPhone, iPad, Mac: caratteri di sistema, nessuna licenza da comprare), altrimenti
+**Nunito Sans** (libero, licenza OFL, incluso nell'app), che ha proporzioni molto simili. Nel PDF
+si incorpora sempre Nunito Sans, perché Avenir non si può distribuire. `system` significa il
+carattere di sistema. Un'unica famiglia per titoli, testo, PDF ed Excel.
+
+## Tema, versione 2
+
+```json
+{ "format": "note-spese-tema", "version": 2,
+  "companyName": "…", "shortName": "…", "logo": "data:image/png;base64,…",
+  "font": "avenir" | "system",
+  "light": { "bg": "#…", "surface": "#…", "text": "#…", "textMuted": "#…",
+             "line": "#…", "lineAccent": "#…", "accent": "#…", "accentText": "#…", "onAccent": "#…" },
+  "dark":  { …stesse chiavi… } }
+```
+
+- `bg` fondo pagina; `surface` superfici sollevate (moduli, pannelli); `line` filetti neutri;
+  `lineAccent` filetti d'accento (intestazioni, riepiloghi); `accent` riempimenti (pulsanti,
+  fotocamera); `accentText` accento usato come testo, leggibile su `bg`; `onAccent` testo sopra
+  `accent`. Colori `#RRGGBB` o `#RRGGBBAA`.
+- Un tema della versione 1 si importa ancora: i colori vecchi si convertono nelle due varianti.
+- **Senza tema** l'app usa un tema neutro (grafite e blu) con la stessa struttura.
+- Il PDF usa sempre la variante chiara, perché si stampa e si legge su carta.

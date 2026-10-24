@@ -146,7 +146,8 @@ export async function deleteRoute(id: string): Promise<void> {
 
 // --- impostazioni ---
 export async function getSettings(): Promise<Settings> {
-  return (await getDb()).get('settings', SETTINGS_KEY) as Promise<Settings>;
+  const s = (await (await getDb()).get('settings', SETTINGS_KEY)) as Settings;
+  return { ...s, appearance: s.appearance ?? 'auto' };
 }
 export async function putSettings(s: Settings): Promise<void> {
   await (await getDb()).put('settings', s, SETTINGS_KEY);

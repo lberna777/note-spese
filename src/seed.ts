@@ -34,6 +34,7 @@ export function buildSeed(now: Date = new Date()): SeedData {
     centsPerKm: RATE_CENTS_PER_KM,
     headerName: 'Mario Rossi',
     lastBackupAt: null,
+    appearance: 'auto',
   };
 
   let n = 0;

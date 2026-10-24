@@ -1,11 +1,11 @@
 import { useState } from 'preact/hooks';
 import { exportBackup, importBackup } from '../backup';
 import { deleteRoute, deleteTheme, newId, putRecipient, putRoute, putSettings, putTheme } from '../db';
-import { kindLabel } from '../labels';
+import { APPEARANCE_LABELS, kindLabel } from '../labels';
 import { formatRatePerKm, parseRatePerKm } from '../money';
-import { isDefaultTheme, parseThemeText, type Theme } from '../theme';
+import { isDefaultTheme, parseThemeText, type Appearance, type Theme } from '../theme';
 import type { Recipient, RecipientKind, Route } from '../types';
-import { Field, Group, Sheet, Switch, val } from './common';
+import { Field, Group, ScreenTitle, Segmented, Sheet, Switch, val } from './common';
 import { IconChevronRight, IconPlus } from './icons';
 import type { AppData } from './useData';
 
@@ -14,7 +14,8 @@ type Editing =
   | { kind: 'route'; item: Route }
   | null;
 
-export function SettingsScreen(props: { data: AppData; reload: () => Promise<void> }) {
+// `part`: sul telefono «all» (tutto in Impostazioni); sul computer «lists» (Destinatari e tratte) o «general» (Impostazioni).
+export function SettingsScreen(props: { data: AppData; reload: () => Promise<void>; part: 'all' | 'lists' | 'general'; desktop: boolean }) {
   const { data, reload } = props;
   const [editing, setEditing] = useState<Editing>(null);
   const [rate, setRate] = useState(formatRatePerKm(data.settings.centsPerKm));
@@ -73,14 +74,27 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
     setMsg('Tema predefinito ripristinato.');
   }
 
-  if (editing) {
-    return <EditorSheet theme={data.theme} editing={editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await reload(); }} />;
+  async function chooseAppearance(a: Appearance) {
+    await putSettings({ ...data.settings, appearance: a });
+    await reload();
   }
+
+  const showLists = props.part !== 'general';
+  const showGeneral = props.part !== 'lists';
+  const title = props.part === 'lists' ? 'Destinatari e tratte' : 'Impostazioni';
 
   return (
     <div class="page">
-      <p class="demo-tag">Demo con dati finti</p>
+      {props.desktop ? (
+        <div class="pc-head"><div><div class="lbl head-sub">Demo con dati finti</div><h1>{title}</h1></div></div>
+      ) : (
+        <ScreenTitle title={title} sub="Demo con dati finti" />
+      )}
+      {editing ? (
+        <EditorSheet theme={data.theme} editing={editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await reload(); }} />
+      ) : null}
 
+      {showLists ? <>
       <Group title="Destinatari">
         {data.recipients.map((r) => (
           <button type="button" class="row two-line tap" key={r.id} onClick={() => setEditing({ kind: 'recipient', item: r })}>
@@ -111,6 +125,9 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
         </button>
       </Group>
 
+      </> : null}
+
+      {showGeneral ? <>
       <form onSubmit={(e) => void saveGeneral(e)}>
         <Group title="I tuoi dati e il rimborso auto" footer="Il nome compare nella nota spese, alla voce «Consulente». Il rimborso è quanto ti viene riconosciuto per ogni km fatto in auto, per esempio 0,5000.">
           <Field label="Il tuo nome">
@@ -123,13 +140,26 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
         </Group>
       </form>
 
-      <Group title="Aspetto" footer="Il tema (nome, logo e colori dell’azienda) si importa da un file .json e resta solo nel telefono.">
+      <Group title="Aspetto" footer="Automatico segue il sistema. Il tema (nome, logo, caratteri e colori dell’azienda, chiari e scuri) si importa da un file .json e resta solo in questo dispositivo.">
+        <div class="row stack">
+          <span class="row-label lbl">Chiaro o scuro</span>
+          <Segmented
+            label="Aspetto"
+            value={data.settings.appearance ?? 'auto'}
+            onChange={(a) => void chooseAppearance(a)}
+            options={(Object.keys(APPEARANCE_LABELS) as Appearance[]).map((a) => ({ value: a, label: APPEARANCE_LABELS[a] }))}
+          />
+        </div>
         <div class="row two-line" data-testid="theme-preview">
-          {data.theme.logo ? <span class="brand-chip"><img src={data.theme.logo} alt="Logo del tema" class="theme-logo" /></span> : null}
+          {data.theme.logo ? <img src={data.theme.logo} alt="Logo del tema" class="theme-logo" /> : null}
           <strong class="grow">{data.theme.companyName || 'Tema predefinito'}</strong>
-          <span class="swatches" role="img" aria-label="Colori del tema">
-            {Object.entries(data.theme.colors).map(([k, c]) => (
-              <i key={k} class="swatch" style={{ background: c }} title={`${k} ${c}`} />
+          <span class="swatches" role="img" aria-label="Colori del tema, chiaro e scuro">
+            {(['light', 'dark'] as const).map((v) => (
+              <span class="swatch-set" key={v}>
+                {(['bg', 'text', 'accent', 'accentText'] as const).map((k) => (
+                  <i key={k} class="swatch" style={{ background: data.theme[v][k] }} title={`${v} ${k} ${data.theme[v][k]}`} />
+                ))}
+              </span>
             ))}
           </span>
         </div>
@@ -144,7 +174,7 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
 
       <Group title="Backup" footer="Il file contiene dati e foto e resta dove lo salvi tu.">
         <div class="row">
-          <span class="grow">{data.settings.lastBackupAt ? `Ultimo backup: ${new Date(data.settings.lastBackupAt).toLocaleDateString('it-IT')}.` : 'Nessun backup ancora.'}</span>
+          <span class="grow secondary-text">{data.settings.lastBackupAt ? `Ultimo backup: ${new Date(data.settings.lastBackupAt).toLocaleDateString('it-IT')}.` : 'Nessun backup ancora.'}</span>
         </div>
         <button type="button" class="row tap link-row" onClick={() => void doExport()}>
           <span class="grow">Esporta backup</span>
@@ -155,7 +185,9 @@ export function SettingsScreen(props: { data: AppData; reload: () => Promise<voi
         </label>
       </Group>
 
-      {msg ? <Group><div class="row" role="status">{msg}</div></Group> : null}
+      </> : null}
+
+      {msg ? <p class="status" role="status">{msg}</p> : null}
     </div>
   );
 }
@@ -217,7 +249,7 @@ function EditorSheet(props: { editing: NonNullable<Editing>; theme: Theme; onClo
         );
       })() : null}
       {editing.kind !== 'recipient' ? (
-        <Group><button type="button" class="row tap destructive center" onClick={() => void remove()}>Elimina tratta</button></Group>
+        <button type="button" class="destructive-btn" onClick={() => void remove()}>Elimina tratta</button>
       ) : null}
     </Sheet>
   );
