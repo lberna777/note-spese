@@ -1,7 +1,8 @@
-// Nota spese in PDF A4, nello stesso linguaggio dell'app: sempre la variante chiara del tema, logo e nome in alto,
-// «Nota spese» leggero e grande, etichette in maiuscoletto spaziato, filetti al posto dei riquadri, importi a destra
-// in grassetto, totali con «Da rimborsare» in accentText, piè di pagina con «pagina N di M» e, in coda, tutti i
-// giustificativi numerati come le righe. Carattere: Nunito Sans incorporato (tema `avenir`) o Helvetica (`system`).
+// Nota spese in PDF A4 orizzontale (297 × 210 mm, anche i giustificativi), nello stesso linguaggio dell'app: sempre
+// la variante chiara del tema, logo e nome in alto, «Nota spese» leggero e grande con i dati sulla stessa riga,
+// etichette in maiuscoletto spaziato, filetti al posto dei riquadri, importi a destra in grassetto, totali con
+// «Da rimborsare» in accentText, piè di pagina con «pagina N di M» e, in coda, i giustificativi numerati come le
+// righe, due per pagina affiancati. Carattere: Nunito Sans incorporato (tema `avenir`) o Helvetica (`system`).
 import type { jsPDF } from 'jspdf';
 import { formatEuro } from '../money';
 import { fullDate, monthLabel, shortDate } from '../labels';
@@ -30,7 +31,7 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
   const [{ jsPDF: JsPdf }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const { headerName, recipient, month, totals, photos, theme, logo } = input;
   const embed = theme.font === 'avenir';
-  const doc: jsPDF = new JsPdf({ unit: 'mm', format: 'a4' });
+  const doc: jsPDF = new JsPdf({ unit: 'mm', format: 'a4', orientation: 'landscape' });
   if (embed) {
     const { NUNITO_SANS } = await import('./pdfFonts');
     doc.addFileToVFS('NunitoSans-Light.ttf', NUNITO_SANS.light);
@@ -82,45 +83,57 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
     doc.text(t, px, y, { charSpace: spacing });
   };
 
-  // --- Intestazione: logo e nome azienda a sinistra, filetto sotto ---
-  const header = (top: number): number => {
+  // Testo tagliato con «…» se non sta nella larghezza (solo dove l'intestazione deve restare su una riga).
+  const fit = (t: string, maxW: number) => {
+    if (doc.getTextWidth(t) <= maxW) return t;
+    while (t.length > 1 && doc.getTextWidth(t + '…') > maxW) t = t.slice(0, -1);
+    return t.trimEnd() + '…';
+  };
+
+  // --- Intestazione di ogni pagina: logo e nome azienda a sinistra, a destra un'etichetta facoltativa, filetto sotto ---
+  const headTop = 12;
+  const header = (right?: { text: string; color: Rgb }): number => {
     let x = margin;
     const h = 11;
     if (logo) {
       const k = Math.min(h / logo.height, 40 / logo.width);
-      doc.addImage(logo.dataUrl, logo.format, x, top, logo.width * k, logo.height * k);
+      doc.addImage(logo.dataUrl, logo.format, x, headTop, logo.width * k, logo.height * k);
       x += logo.width * k + 4;
     }
-    if (theme.companyName) caps(theme.companyName, x, top + h / 2 + 1.2, 8.5, col.text);
+    if (theme.companyName) caps(theme.companyName, x, headTop + h / 2 + 1.2, 8.5, col.text);
+    if (right) caps(right.text, pageW - margin, headTop + h / 2 + 1.2, 7.5, right.color, { align: 'right' });
     doc.setDrawColor(...col.line);
     doc.setLineWidth(0.15);
-    doc.line(margin, top + h + 4, pageW - margin, top + h + 4);
-    return top + h + 4;
+    doc.line(margin, headTop + h + 4, pageW - margin, headTop + h + 4);
+    return headTop + h + 4;
   };
 
-  // --- Prima pagina: titolo e dati ---
-  const headerBottom = header(12);
+  // --- Prima pagina: a chi è rivolta la nota (interna o per il cliente) in alto a destra; poi titolo e dati su una riga ---
+  const headerBottom = header({ text: recipient.kind === 'azienda' ? 'Nota spese interna' : 'Nota spese per il cliente', color: col.accentText });
+  const titleY = headerBottom + 15;
   font('light', 26);
   doc.setTextColor(...col.text);
-  doc.text('Nota spese', margin, headerBottom + 17);
-  // Sotto il titolo si dice a chi è rivolta la nota: all'azienda (interna) o a un cliente.
-  caps(recipient.kind === 'azienda' ? 'Nota spese interna' : 'Nota spese per il cliente', margin, headerBottom + 24, 7.5, col.accentText);
-  const metaY = headerBottom + 33;
+  doc.text('Nota spese', margin, titleY);
   const meta: [string, string][] = [['Consulente', headerName], ['Destinatario', recipient.name], ['Mese', monthLabel(month)]];
-  const metaX = [margin, margin + 58, margin + 128];
+  const metaX0 = margin + 78;
+  const metaW = (contentW - 78) / 3;
   meta.forEach(([k, val], i) => {
-    caps(k, metaX[i], metaY, 6.5, col.muted);
+    const x = metaX0 + i * metaW;
+    caps(k, x, titleY - 6.5, 6.5, col.muted);
     font('regular', 10);
     doc.setTextColor(...col.text);
-    doc.text(val, metaX[i], metaY + 5.2, { maxWidth: i === 2 ? contentW - 128 : 54 });
+    doc.text(val, x, titleY, { maxWidth: metaW - 4 });
   });
 
-  // --- Tabella delle spese ---
+  // --- Tabella delle spese: tutta la larghezza utile, Località e Fornitore larghe, Km e Fattura strette ---
   const heads = ['N.', 'Data', 'Località', 'Fornitore', 'Tipologia', 'Km', 'Importo', 'Fattura', 'Pagato con'];
+  const widths = [8, 16, 50, 75, 30, 12, 26, 18, 34]; // somma = 269 mm, la larghezza utile
+  const amountPad = 5;
   const rightCols = new Set([5, 6]);
   autoTable(doc, {
-    startY: metaY + 13,
-    margin: { left: margin, right: margin, top: 20, bottom: 20 },
+    startY: titleY + 10,
+    // sulle pagine successive la tabella riparte sotto l'intestazione, con le etichette delle colonne ripetute
+    margin: { left: margin, right: margin, top: headerBottom + 8, bottom: 20 },
     theme: 'plain',
     head: [heads],
     body: totals.rows.map((e, i) => [
@@ -135,20 +148,19 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
       payerText(e),
     ]),
     styles: {
-      font: family('light').name, fontStyle: family('light').style, fontSize: 8.5, cellPadding: { top: 2.6, bottom: 2.6, left: 0, right: 2 },
+      font: family('light').name, fontStyle: family('light').style, fontSize: 9, cellPadding: { top: 2.6, bottom: 2.6, left: 0, right: 3 },
       textColor: col.text, lineWidth: 0, valign: 'middle',
     },
-    headStyles: { cellPadding: { top: 0, bottom: 3, left: 0, right: 2 }, minCellHeight: 7, lineWidth: { bottom: 0.4 }, lineColor: col.accent },
+    headStyles: { cellPadding: { top: 0, bottom: 3, left: 0, right: 3 }, minCellHeight: 7, lineWidth: { bottom: 0.4 }, lineColor: col.accent },
     bodyStyles: { lineWidth: { bottom: 0.12 }, lineColor: col.line },
     columnStyles: {
-      0: { cellWidth: 8, textColor: col.muted },
-      1: { cellWidth: 14 },
-      2: { cellWidth: 28 },
-      4: { cellWidth: 25 },
-      5: { halign: 'right', cellWidth: 11 },
-      6: { halign: 'right', cellWidth: 23, cellPadding: { top: 2.6, bottom: 2.6, left: 0, right: 5 }, font: family('bold').name, fontStyle: family('bold').style },
-      7: { cellWidth: 14 },
-      8: { cellWidth: 26 },
+      ...Object.fromEntries(widths.map((w, i) => [i, { cellWidth: w }])),
+      0: { cellWidth: widths[0], textColor: col.muted },
+      5: { cellWidth: widths[5], halign: 'right' },
+      6: {
+        cellWidth: widths[6], halign: 'right', cellPadding: { top: 2.6, bottom: 2.6, left: 0, right: amountPad },
+        font: family('bold').name, fontStyle: family('bold').style,
+      },
     },
     didParseCell(d) {
       if (d.section === 'head') d.cell.text = []; // le etichette si disegnano a mano, spaziate
@@ -158,12 +170,15 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
     didDrawCell(d) {
       if (d.section !== 'head') return;
       const right = rightCols.has(d.column.index);
-      const x = right ? d.cell.x + d.cell.width - (d.column.index === 6 ? 5 : 2) : d.cell.x;
+      const x = right ? d.cell.x + d.cell.width - (d.column.index === 6 ? amountPad : 3) : d.cell.x;
       caps(heads[d.column.index], x, d.cell.y + d.cell.height - 4, 6.2, col.muted, { align: right ? 'right' : 'left' });
+    },
+    didDrawPage(d) {
+      if (d.pageNumber > 1) header();
     },
   });
 
-  // --- Totali: blocco proprio, a destra, con «Da rimborsare» in accentText ---
+  // --- Totali: blocco proprio, allineato a destra sotto la tabella, con «Da rimborsare» in accentText ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let y: number = ((doc as any).lastAutoTable?.finalY ?? 60) + 10;
   const rowsT: [string, number, boolean][] = [
@@ -174,10 +189,10 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
   ];
   if (y + rowsT.length * 8 + 6 > pageH - 20) {
     doc.addPage();
-    y = 24;
+    y = header() + 10;
   }
-  const bx = pageW - margin - 96;
-  const bw = 96;
+  const bw = 100;
+  const bx = pageW - margin - bw;
   doc.setDrawColor(...col.lineAccent);
   doc.setLineWidth(0.3);
   doc.line(bx, y, bx + bw, y);
@@ -193,39 +208,64 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
     doc.line(bx, ry + 2.6 + (big ? 0.4 : 0), bx + bw, ry + 2.6 + (big ? 0.4 : 0));
   });
 
-  // --- Giustificativi: due foto per pagina, numerate come le righe della tabella, con la stessa intestazione ---
-  const slotH = 120;
-  let slot = 0;
+  // --- Giustificativi in coda, numerati come le righe: due verticali affiancati per pagina; da solo quello
+  // orizzontale, e quello verticale che resta senza compagno ---
+  const proofs: { n: number; e: (typeof totals.rows)[number]; url: string; format: 'PNG' | 'JPEG'; w: number; h: number }[] = [];
   for (let i = 0; i < totals.rows.length; i++) {
     const e = totals.rows[i];
     const photo = photos.get(e.id);
     if (!photo) continue;
-    if (slot % 2 === 0) {
-      doc.addPage();
-      const hb = header(12);
-      caps(`Giustificativi · ${recipient.name} · ${monthLabel(month)}`, margin, hb + 9, 7, col.muted);
-    }
-    const top = 48 + (slot % 2) * slotH;
-    // intestazione della foto: numero in accento, poi i dati della spesa, filetto d'accento
-    font('bold', 11);
-    doc.setTextColor(...col.accentText);
-    doc.text(String(i + 1), margin, top);
-    font('regular', 10);
-    doc.setTextColor(...col.text);
-    doc.text(`${e.supplier || categoryText(e)} · ${fullDate(e.date)}`, margin + 9, top);
-    font('bold', 10);
-    doc.text(formatEuro(e.amountCents), pageW - margin, top, { align: 'right' });
-    doc.setDrawColor(...col.lineAccent);
-    doc.setLineWidth(0.3);
-    doc.line(margin, top + 2.5, pageW - margin, top + 2.5);
-
     const { url, format } = await blobToDataUrl(photo);
     const props = doc.getImageProperties(url);
-    const maxW = contentW;
-    const maxH = slotH - 20;
-    const k = Math.min(maxW / props.width, maxH / props.height);
-    doc.addImage(url, format, margin, top + 6, props.width * k, props.height * k);
-    slot++;
+    proofs.push({ n: i + 1, e, url, format, w: props.width, h: props.height });
+  }
+  const upright = (p: (typeof proofs)[number]) => p.h >= p.w;
+  const groups: (typeof proofs)[] = [];
+  for (let k = 0; k < proofs.length; k++) {
+    const a = proofs[k];
+    const b = proofs[k + 1];
+    if (upright(a) && b && upright(b)) {
+      groups.push([a, b]);
+      k++;
+    } else groups.push([a]);
+  }
+
+  const gap = 12;
+  for (const group of groups) {
+    doc.addPage();
+    const hb = header();
+    caps(`Giustificativi · ${recipient.name} · ${monthLabel(month)}`, margin, hb + 9, 7, col.muted);
+    const top = hb + 19;
+    const imgTop = top + 6;
+    const imgBottom = pageH - 20;
+    const slotW = group.length === 2 ? (contentW - gap) / 2 : contentW;
+    group.forEach((p, j) => {
+      const x = margin + j * (slotW + gap);
+      // intestazione della foto: numero in accento, poi i dati della spesa, importo a destra, filetto d'accento
+      font('bold', 11);
+      doc.setTextColor(...col.accentText);
+      doc.text(String(p.n), x, top);
+      font('bold', 10);
+      const amount = formatEuro(p.e.amountCents);
+      const amountW = doc.getTextWidth(amount);
+      doc.setTextColor(...col.text);
+      doc.text(amount, x + slotW, top, { align: 'right' });
+      font('regular', 10);
+      doc.text(fit(`${p.e.supplier || categoryText(p.e)} · ${fullDate(p.e.date)}`, slotW - 9 - amountW - 4), x + 9, top);
+      doc.setDrawColor(...col.lineAccent);
+      doc.setLineWidth(0.3);
+      doc.line(x, top + 2.5, x + slotW, top + 2.5);
+
+      // foto centrata nel suo spazio, con un filetto sottile: gli scontrini scansionati hanno il fondo bianco come la carta
+      const k = Math.min(slotW / p.w, (imgBottom - imgTop) / p.h);
+      const iw = p.w * k;
+      const ih = p.h * k;
+      const ix = x + (slotW - iw) / 2;
+      doc.addImage(p.url, p.format, ix, imgTop, iw, ih);
+      doc.setDrawColor(...col.line);
+      doc.setLineWidth(0.12);
+      doc.rect(ix, imgTop, iw, ih);
+    });
   }
 
   // --- Piè di pagina su ogni pagina: azienda e «pagina N di M» ---
