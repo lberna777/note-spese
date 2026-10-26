@@ -43,15 +43,15 @@ describe('migrazione dell’archivio dalla versione 1 alla 2', () => {
     expect(expenses.find((e) => e.id === 'v1-a')).toMatchObject({ amountCents: 500, payer: 'azienda' });
     expect(expenses.find((e) => e.id === 'v1-b')).toMatchObject({ amountCents: 700, payer: 'personale' });
     const db = await getDb();
-    expect(db.version).toBe(2);
+    expect(db.version).toBe(3);
     expect(Array.from(db.objectStoreNames)).not.toContain('cards');
     // i dati esistenti non vengono rimpiazzati dai dati finti
     expect((await getSettings()).headerName).toBe('Prova');
   });
 
-  it('una nuova installazione nasce già in versione 2, senza carte', async () => {
+  it('una nuova installazione nasce già in versione 3, senza carte', async () => {
     const db = await getDb();
-    expect(db.version).toBe(2);
+    expect(db.version).toBe(3);
     expect(Array.from(db.objectStoreNames)).not.toContain('cards');
   });
 });

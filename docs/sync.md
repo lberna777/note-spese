@@ -32,7 +32,8 @@ QR code, mai su internet.
   sulla Home.
 - **Mostra il codice** (Impostazioni → Collega un dispositivo): QR grande, scade dopo 10 minuti
   (passati i quali il dispositivo genera un nuovo segreto solo se non è già collegato), e sotto lo
-  stesso codice in 13 gruppi di 5 caratteri per inserirlo a mano.
+  stesso codice per inserirlo a mano: base32 Crockford (O si legge 0, I e L si leggono 1), con un
+  carattere di controllo finale, in 16 gruppi di 5 caratteri (l'ultimo di 3).
 - **Inquadra il codice**: lettore QR dentro l'app (fotocamera con `getUserMedia`, decodifica con
   jsQR, licenza Apache-2.0), oppure campo per scrivere il codice a mano. Sul computer senza
   fotocamera si usa il campo.
