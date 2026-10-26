@@ -114,3 +114,34 @@ In `public/esempi/` ci sono tre scontrini finti e il tema d'esempio. Per vedere 
 | Nunito Sans (Fontsource) | carattere dell'app e del PDF | OFL-1.1 |
 
 Il progetto è scritto in TypeScript e costruito con Vite; i test usano Vitest.
+
+## Server di sincronizzazione
+
+La sincronizzazione tra dispositivi usa un piccolo server (Cloudflare Worker con database D1) che
+conserva solo buste cifrate e non può leggerne il contenuto. Il codice sta in `worker/`, il
+protocollo in `docs/sync.md`. Per un uso personale dovrebbe bastare il piano gratuito di Workers e
+D1 (i limiti attuali sono sulle pagine dei prezzi di Cloudflare).
+
+Pubblicazione, da un computer con Node:
+
+```sh
+cd worker
+npm install
+npx wrangler login
+npx wrangler d1 create note-spese-sync
+```
+
+L'ultimo comando stampa un `database_id`: copiarlo in `worker/wrangler.toml` al posto del
+segnaposto `00000000-0000-0000-0000-000000000000`. Poi:
+
+```sh
+npx wrangler d1 migrations apply note-spese-sync --remote
+npx wrangler deploy
+```
+
+`deploy` stampa l'indirizzo del server (del tipo `https://note-spese-sync.<account>.workers.dev`).
+Va impostato in `VITE_SYNC_URL` quando si costruisce l'app (per esempio
+`VITE_SYNC_URL=https://… npm run build`); senza, la sezione «Dispositivi collegati» non compare.
+
+Le origini ammesse dal server sono in `ALLOWED_ORIGINS` (`worker/wrangler.toml`); `http://localhost:*`
+è sempre ammesso, per lo sviluppo. I test del server: `cd worker && npx vitest run`.

@@ -1,0 +1,14 @@
+name = "note-spese-sync"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+[vars]
+# Origini autorizzate (separate da virgola). http://localhost:* è gestito in codice.
+ALLOWED_ORIGINS = "https://lberna777.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "note-spese-sync"
+# SEGNAPOSTO: sostituire con l'id stampato da `npx wrangler d1 create note-spese-sync`
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
