@@ -23,9 +23,9 @@ async function decode(blob: Blob): Promise<{ source: CanvasImageSource; width: n
   }
 }
 
-export async function resizePhoto(blob: Blob, maxSide: number = MAX_SIDE, quality: number = JPEG_QUALITY): Promise<Blob> {
+export async function resizePhoto(blob: Blob): Promise<Blob> {
   const { source, width, height } = await decode(blob);
-  const scale = Math.min(1, maxSide / Math.max(width, height));
+  const scale = Math.min(1, MAX_SIDE / Math.max(width, height));
   const w = Math.max(1, Math.round(width * scale));
   const h = Math.max(1, Math.round(height * scale));
   const canvas = document.createElement('canvas');
@@ -37,6 +37,6 @@ export async function resizePhoto(blob: Blob, maxSide: number = MAX_SIDE, qualit
   ctx.fillRect(0, 0, w, h);
   ctx.drawImage(source, 0, 0, w, h);
   return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Conversione JPEG fallita'))), 'image/jpeg', quality),
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Conversione JPEG fallita'))), 'image/jpeg', JPEG_QUALITY),
   );
 }

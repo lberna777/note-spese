@@ -15,7 +15,6 @@ export type Category =
   | 'altro';
 
 export interface Recipient {
-  updatedAt?: number; // ms, ultima modifica locale (sincronizzazione)
   id: Id;
   name: string;
   kind: RecipientKind;
@@ -24,7 +23,6 @@ export interface Recipient {
 }
 
 export interface Route {
-  updatedAt?: number; // ms, ultima modifica locale (sincronizzazione)
   id: Id;
   from: string;
   to: string;
@@ -41,7 +39,6 @@ export interface Settings {
 export type ReadState = 'letta' | 'corretta' | 'manuale';
 
 export interface Expense {
-  updatedAt?: number; // ms, ultima modifica locale (sincronizzazione)
   id: Id;
   date: string; // AAAA-MM-GG
   recipientId: Id;
@@ -60,13 +57,11 @@ export interface Expense {
 }
 
 export interface Photo {
-  updatedAt?: number; // ms, ultima modifica locale (sincronizzazione)
   id: Id;
   blob: Blob;
 }
 
 export interface KnownSupplier {
-  updatedAt?: number; // ms, ultima modifica locale (sincronizzazione)
   name: string; // chiave, normalizzata in maiuscolo
   category: Category;
   place: string;
