@@ -1,0 +1,30 @@
+{
+  "format": "note-spese-tema",
+  "version": 2,
+  "companyName": "Studio Aurora S.r.l.",
+  "shortName": "Studio Aurora",
+  "logo": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjM4IiByPSIxNCIgZmlsbD0iI2QwNzczZiIvPjxwYXRoIGQ9Ik02IDQ2YTI0IDI0IDAgMCAxIDQ4IDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJjODc5MSIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cGF0aCBkPSJNMTIgNTJhMTggMTggMCAwIDEgMzYgMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMmM4NzkxIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iLjYiLz48L3N2Zz4=",
+  "font": "avenir",
+  "light": {
+    "bg": "#f6f3ee",
+    "surface": "#ffffff",
+    "text": "#17353a",
+    "textMuted": "#4f6468",
+    "line": "#17353a1f",
+    "lineAccent": "#a85a2c66",
+    "accent": "#a85a2c",
+    "accentText": "#8a4a22",
+    "onAccent": "#ffffff"
+  },
+  "dark": {
+    "bg": "#0c1517",
+    "surface": "#132123",
+    "text": "#eef1ec",
+    "textMuted": "#9db0b0",
+    "line": "#eef1ec1f",
+    "lineAccent": "#d88a4f5c",
+    "accent": "#d88a4f",
+    "accentText": "#e8a56f",
+    "onAccent": "#1a1008"
+  }
+}
