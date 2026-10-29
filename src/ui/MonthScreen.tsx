@@ -6,7 +6,7 @@ import { formatEuro } from '../money';
 import { monthTotals, splitByKind } from '../totals';
 import type { Expense, Recipient } from '../types';
 import { ScreenTitle } from './common';
-import { IconCamera, IconClose, IconPhotos, IconPlus, IconWarning } from './icons';
+import { IconCamera, IconChevronDown, IconChevronUp, IconClose, IconPhotos, IconPlus, IconWarning } from './icons';
 import type { AppData } from './useData';
 
 const DAY = 24 * 3600 * 1000;
@@ -42,6 +42,7 @@ export function MonthScreen(props: {
   onPhoto: (f: File) => void;
   onManual: () => void;
   onEdit: (e: Expense) => void;
+  onMove: (rows: Expense[], id: string, dir: -1 | 1) => void;
   onNote: (r: Recipient) => void;
   onGoSettings: () => void;
 }) {
@@ -49,6 +50,8 @@ export function MonthScreen(props: {
   const camera = useRef<HTMLInputElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
   const [iosHint, setIosHint] = useState(() => shouldShowIosHint(currentDevice()) && !iosHintDismissed());
+  // Destinatario di cui si sta riordinando l'elenco (uno alla volta).
+  const [reordering, setReordering] = useState<string | null>(null);
   const groups = monthGroups(data, month);
   const { company, clients } = splitByKind(groups, (g) => g.r);
   const count = groups.reduce((s, g) => s + g.t.rows.length, 0);
@@ -56,20 +59,43 @@ export function MonthScreen(props: {
 
   const section = ({ r, t }: MonthGroup) => (
     <section class="sect" key={r.id}>
-      <div class="sect-head"><span class="lbl lbl-accent">{r.name}</span><span class="lbl">{kindLabel(r.kind, data.theme)}</span></div>
+      <div class="sect-head">
+        <span class="lbl lbl-accent">{r.name}</span>
+        <span class="sect-tools">
+          {t.rows.length >= 2 ? (
+            <button type="button" class="reorder-toggle" onClick={() => setReordering(reordering === r.id ? null : r.id)}>
+              {reordering === r.id ? 'Fine' : 'Riordina'}
+            </button>
+          ) : null}
+          <span class="lbl">{kindLabel(r.kind, data.theme)}</span>
+        </span>
+      </div>
       <div class="rows">
-        {t.rows.map((e) => (
-          <button type="button" class="row exp" key={e.id} onClick={() => props.onEdit(e)}>
-            <span class="grow">
-              <span class="nome">{e.supplier || categoryText(e)}</span>
-              <span class="meta">{expenseMeta(e)}</span>
-            </span>
-            <span class="right-col">
-              <span class="imp num">{formatEuro(e.amountCents)}</span>
-              <span class="data num">{shortDate(e.date)}</span>
-            </span>
-          </button>
-        ))}
+        {t.rows.map((e, i) => {
+          const body = (
+            <>
+              <span class="grow">
+                <span class="nome">{e.supplier || categoryText(e)}</span>
+                <span class="meta">{expenseMeta(e)}</span>
+              </span>
+              <span class="right-col">
+                <span class="imp num">{formatEuro(e.amountCents)}</span>
+                <span class="data num">{shortDate(e.date)}</span>
+              </span>
+            </>
+          );
+          if (reordering !== r.id || t.rows.length < 2) {
+            return <button type="button" class="row exp" key={e.id} onClick={() => props.onEdit(e)}>{body}</button>;
+          }
+          const name = e.supplier || categoryText(e);
+          return (
+            <div class="row exp reorder" key={e.id}>
+              {body}
+              <button type="button" class="icon-btn" aria-label={`Sposta su: ${name}`} disabled={i === 0} onClick={() => props.onMove(t.rows, e.id, -1)}><IconChevronUp size={20} /></button>
+              <button type="button" class="icon-btn" aria-label={`Sposta giù: ${name}`} disabled={i === t.rows.length - 1} onClick={() => props.onMove(t.rows, e.id, 1)}><IconChevronDown size={20} /></button>
+            </div>
+          );
+        })}
       </div>
       <div class="sect-foot"><span class="lbl">{reimburseLabel(r)}</span><span class="v accent num">{formatEuro(t.toReimburseCents)}</span></div>
       <button type="button" class="cta-nota" onClick={() => props.onNote(r)}>Nota spese</button>

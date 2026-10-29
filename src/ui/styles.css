@@ -111,6 +111,13 @@ progress { width: 70%; max-width: 360px; height: 6px; accent-color: var(--accent
 /* Sezione per destinatario */
 .sect { padding-top: 26px; }
 .sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; }
+.sect-tools { display: inline-flex; align-items: baseline; gap: 14px; }
+.reorder-toggle { background: none; border: 0; padding: 0; min-height: 24px; color: var(--accent-text); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+.row.exp.reorder { cursor: default; padding: 4px 0; }
+.row.exp.reorder .grow { padding: 9px 0; }
+.row.exp.reorder .right-col { padding: 9px 0; }
+.row.exp.reorder .icon-btn { align-self: center; margin-left: -8px; }
+.row.exp.reorder .icon-btn:disabled { opacity: 0.3; cursor: default; }
 .rows { border-top: 1px solid var(--line-accent); }
 .row {
   position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0; margin: 0;
@@ -323,6 +330,10 @@ table.expenses { width: 100%; border-collapse: collapse; }
 .expenses td:first-child, .expenses th:first-child { white-space: nowrap; }
 .expenses .si { color: var(--accent-text); font-weight: 400; }
 .expenses .no { color: var(--muted); }
+.expenses th.c-move, .expenses td.c-move { width: 64px; white-space: nowrap; text-align: right; padding-right: 0; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.move-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; padding: 0; color: var(--accent-text); cursor: pointer; }
+.move-btn:disabled { opacity: 0.3; cursor: default; }
 .expenses td:nth-child(n+4) { white-space: nowrap; }
 
 .pc-panel { border-left: 1px solid var(--line); padding: 26px 24px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 0; height: 100dvh; overflow-y: auto; }

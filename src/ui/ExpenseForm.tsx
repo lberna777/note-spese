@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'preact/hooks';
 import { deleteExpense, deletePhoto, newId, putExpense, putKnownSupplier } from '../db';
 import { CATEGORIES, CATEGORY_LABELS, PAYER_LABELS } from '../labels';
+import { positionAfterEdit } from '../order';
 import { suggestPayer } from '../payer';
 import { autoAmountCents, autoKm, formatDecimal, formatEuro, parseAmount } from '../money';
 import type { Category, Expense, Payer, ReadState, ReceiptDraft } from '../types';
@@ -131,6 +132,8 @@ export function ExpenseForm(props: FormProps) {
       payer, routeId: isAuto ? routeId : null, roundTrip: isAuto ? roundTrip : false,
       km: isAuto ? km : null, photoId, notes: notes.trim(), readState,
     };
+    const position = positionAfterEdit(existing, date, recipientId);
+    if (position !== undefined) exp.position = position;
     await putExpense(exp);
     if (finalSupplier && !isAuto) {
       await putKnownSupplier({ name: finalSupplier, category, place: finalPlace });

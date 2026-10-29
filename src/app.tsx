@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
+import { putExpenses } from './db';
+import { moveRow } from './order';
 import { currentMonth, todayIso } from './labels';
 import { applyTheme } from './theme';
 import type { Expense, ReceiptDraft, Recipient } from './types';
@@ -84,6 +86,13 @@ export function App() {
     setSelectedExpense(existing.id);
     setOverlay({ kind: 'form', existing });
   };
+  // Riordino a mano: scrive le nuove posizioni e ricarica.
+  const onMove = async (rows: Expense[], id: string, dir: -1 | 1) => {
+    const moved = moveRow(rows, id, dir);
+    if (!moved) return;
+    await putExpenses(moved);
+    await reload();
+  };
   const onManual = () => setOverlay({ kind: 'form' });
 
   // Il modulo sale sopra la schermata (foglio dal basso sul telefono, pannello a destra sul computer):
@@ -143,7 +152,7 @@ export function App() {
           />
           {tab === 'mese' ? (
             <>
-              <MonthDesktop data={data} month={month} group={group} selectedId={selectedExpense} onPhoto={onPhoto} onManual={onManual} onEdit={onEdit} />
+              <MonthDesktop data={data} month={month} group={group} selectedId={selectedExpense} onPhoto={onPhoto} onManual={onManual} onEdit={onEdit} onMove={onMove} />
               <NotePanel data={data} month={month} group={group} onEdit={onEdit} />
             </>
           ) : (
@@ -183,6 +192,7 @@ export function App() {
               onPhoto={onPhoto}
               onManual={onManual}
               onEdit={onEdit}
+              onMove={onMove}
               onNote={(recipient) => setOverlay({ kind: 'note', recipient })}
               onGoSettings={() => goTab('impostazioni')}
             />

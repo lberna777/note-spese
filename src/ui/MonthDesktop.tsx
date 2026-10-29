@@ -4,7 +4,7 @@ import { kindLabel, monthLabel, PAYER_SHORT, shortDate } from '../labels';
 import { formatEuro } from '../money';
 import type { Expense, Recipient } from '../types';
 import { usePhotoUrl } from './common';
-import { IconPhotos } from './icons';
+import { IconChevronDown, IconChevronUp, IconPhotos } from './icons';
 import type { MonthGroup } from './MonthScreen';
 import { useNoteExport } from './useNoteExport';
 import type { AppData } from './useData';
@@ -36,6 +36,7 @@ export function MonthDesktop(props: {
   onPhoto: (f: File) => void;
   onManual: () => void;
   onEdit: (e: Expense) => void;
+  onMove: (rows: Expense[], id: string, dir: -1 | 1) => void;
 }) {
   const { data, month, group } = props;
   const file = useRef<HTMLInputElement>(null);
@@ -89,10 +90,11 @@ export function MonthDesktop(props: {
               <th class="r c-amt">Importo</th>
               <th class="c-inv">Fattura</th>
               <th class="c-pay">Pagato con</th>
+              <th class="c-move"><span class="vh">Ordine</span></th>
             </tr>
           </thead>
           <tbody>
-            {t.rows.map((e) => (
+            {t.rows.map((e, i) => (
               <tr
                 key={e.id}
                 class={props.selectedId === e.id ? 'sel' : ''}
@@ -109,6 +111,10 @@ export function MonthDesktop(props: {
                 <td class="r imp num">{formatEuro(e.amountCents)}</td>
                 <td class={e.invoice ? 'si' : 'no'}>{e.invoice ? 'Sì' : 'No'}</td>
                 <td>{PAYER_SHORT[e.payer]}</td>
+                <td class="c-move">
+                  <button type="button" class="move-btn" aria-label={`Sposta su: ${e.supplier || categoryText(e)}`} disabled={i === 0} onClick={(ev) => { ev.stopPropagation(); props.onMove(t.rows, e.id, -1); }} onKeyDown={(ev) => ev.stopPropagation()}><IconChevronUp size={16} /></button>
+                  <button type="button" class="move-btn" aria-label={`Sposta giù: ${e.supplier || categoryText(e)}`} disabled={i === t.rows.length - 1} onClick={(ev) => { ev.stopPropagation(); props.onMove(t.rows, e.id, 1); }} onKeyDown={(ev) => ev.stopPropagation()}><IconChevronDown size={16} /></button>
+                </td>
               </tr>
             ))}
           </tbody>

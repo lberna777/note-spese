@@ -54,6 +54,7 @@ export interface Expense {
   photoId: Id | null;
   notes: string;
   readState: ReadState;
+  position?: number; // ordine scelto a mano nel mese del destinatario; assente = segue la data
 }
 
 export interface Photo {

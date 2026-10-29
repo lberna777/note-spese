@@ -55,6 +55,16 @@ describe('xlsx', () => {
     expect(ws.getCell(`F${t + 3}`).value).toBe('Da rimborsare');
   });
 
+  it('l’ordine delle righe segue le position', async () => {
+    const base = input('r-lunari');
+    const rows = [...base.totals.rows].reverse().map((x, i) => ({ ...x, position: i }));
+    const totals = monthTotals(rows, base.recipient, base.month);
+    const ws = (await load(await buildXlsx({ ...base, totals }))).getWorksheet(SHEET_NAME)!;
+    const first = HEADER_ROW + 1;
+    expect(ws.getCell(`D${first}`).value).toBe(base.totals.rows[rows.length - 1].supplier);
+    expect(ws.getCell(`D${first + rows.length - 1}`).value).toBe(base.totals.rows[0].supplier);
+  });
+
   it('nota verso l\'azienda: da rimborsare al consulente', async () => {
     const wb = await load(await buildXlsx(input('r-azienda')));
     const ws = wb.getWorksheet(SHEET_NAME)!;

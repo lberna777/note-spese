@@ -112,6 +112,11 @@ export async function getExpense(id: string): Promise<Expense | undefined> {
 export async function putExpense(e: Expense): Promise<void> {
   await (await getDb()).put('expenses', e);
 }
+// Scrive più spese in un'unica transazione.
+export async function putExpenses(list: Expense[]): Promise<void> {
+  const tx = (await getDb()).transaction('expenses', 'readwrite');
+  await Promise.all([...list.map((e) => tx.store.put(e)), tx.done]);
+}
 export async function deleteExpense(id: string): Promise<void> {
   const db = await getDb();
   const e: Expense | undefined = await db.get('expenses', id);

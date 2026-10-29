@@ -1,8 +1,9 @@
 // Totali di un mese per destinatario e riepilogo degli anticipi del consulente.
+import { orderRows } from './order';
 import type { Expense, Recipient } from './types';
 
 export interface MonthTotals {
-  rows: Expense[]; // ordinate per data
+  rows: Expense[]; // nell'ordine scelto, altrimenti per data
   totalCents: number;
   paidByCompanyCents: number;
   advancedPersonallyCents: number;
@@ -24,9 +25,7 @@ export function monthTotals(
   recipient: Recipient,
   month: string,
 ): MonthTotals {
-  const rows = expenses
-    .filter((e) => e.recipientId === recipient.id && inMonth(e, month))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const rows = orderRows(expenses.filter((e) => e.recipientId === recipient.id && inMonth(e, month)));
   let totalCents = 0;
   let paidByCompanyCents = 0;
   let advancedPersonallyCents = 0;
