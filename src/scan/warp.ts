@@ -12,6 +12,9 @@ export const SCAN_JPEG_QUALITY = 0.85;
 /** Margine rifilato dopo il raddrizzamento, per lato (frazione della dimensione): toglie il bordo con il fondo. */
 export const TRIM = 0.015;
 
+/** Filtro Documento: livello massimo del nero (su 255), per gli scontrini con pochissimo testo. */
+export const LO_MAX = 150;
+
 export interface WarpResult extends RasterImage {
   /** Quarti di giro orari applicati in automatico perché il testo era verticale. */
   autoTurns: number;
@@ -138,7 +141,9 @@ function documentFilter(cv: Cv, flat: InstanceType<Cv['Mat']>, keep: Keep): Inst
   cv.divide(gray, bg, norm, 255); // 255 dove il pixel è uguale allo sfondo (carta), meno dove è più scuro
   // Livelli: nero al 1° percentile, bianco poco sotto la carta; la curva (gamma 1,6) scurisce i grigi medi
   // (testo sbiadito) senza toccare la carta.
-  const lo = percentile(norm.data, 1, 0, 0.01);
+  // Il nero non sale oltre LO_MAX: in uno scontrino con poche righe (una ricevuta del taxi) l'inchiostro è meno
+  // dell'1% dei pixel, il percentile cadrebbe sulla carta e tutto diventerebbe nero (poi sbiancato come fondo).
+  const lo = Math.min(percentile(norm.data, 1, 0, 0.01), LO_MAX);
   const hi = 235;
   const range = Math.max(40, hi - lo);
   const lut = new Uint8ClampedArray(256);

@@ -78,10 +78,21 @@ export function totalLineScore(line: string): number {
   const k = normalizeForKeywords(line);
   if (NOT_TOTAL.test(k)) return 0;
   if (/\bTOTALE\s+(COMPLESSIVO|EURO)\b/.test(k)) return 4;
-  if (/\bTOTALE\b|\bDA PAGARE\b/.test(k)) return 3;
+  // «TOT. EUR 23,40» delle ricevute dei taxi e dei POS
+  if (/\bTOTALE\b|\bTOT\b|\bDA PAGARE\b/.test(k)) return 3;
   if (/\bIMPORTO\b/.test(k)) return 2;
   if (/\bTOTAL\b/.test(k)) return 2;
+  // Ricevuta senza parola «totale» («Euro 25»): vale solo in mancanza d'altro, e da confermare.
+  if (/\bEURO?\b|€/.test(k)) return 1;
   return 0;
+}
+
+/** Importo in euro interi scritto accanto alla valuta («Euro 25», «€ 18», «25 EUR»), in centesimi. */
+export function findWholeEuro(line: string): number | null {
+  const m = /(?:\bEURO?\b|€)\s*(\d{1,4})(?![\d.,]*\d)|(?<![\d.,])(\d{1,4})\s*(?:\bEURO?\b|€)/i.exec(line);
+  if (!m) return null;
+  const v = parseInt(m[1] ?? m[2], 10);
+  return v > 0 ? v * 100 : null;
 }
 
 /** Cerca la riga del totale; in mancanza prende l'importo più grande (confidenza bassa). */
@@ -92,6 +103,10 @@ export function findTotal(text: string): Field<number> | undefined {
     const score = totalLineScore(line);
     if (!score) return;
     let amounts = findAmounts(line);
+    if (amounts.length === 0) {
+      const whole = findWholeEuro(line);
+      if (whole) amounts = [whole];
+    }
     // L'importo può essere andato a capo sulla riga successiva.
     if (amounts.length === 0 && i + 1 < lines.length) {
       const next = lines[i + 1];
@@ -104,7 +119,10 @@ export function findTotal(text: string): Field<number> | undefined {
     // A parità di priorità vale l'ultima riga (dopo i parziali).
     if (!best || score >= best.score) best = { score, cents };
   });
-  if (best) return field((best as { cents: number }).cents, 'alta');
+  if (best) {
+    const b = best as { score: number; cents: number };
+    return field(b.cents, b.score >= 2 ? 'alta' : 'bassa');
+  }
 
   let max = 0;
   for (const line of lines) {
@@ -221,7 +239,7 @@ export function findInvoice(text: string): Field<boolean> {
 
 const KEYWORDS: Array<[Category, RegExp]> = [
   ['treno', /\bTRENITALIA\b|\bITALO\b|\bFRECCIA|\bTRENORD\b|\bBIGLIETTO\b/],
-  ['taxi', /\bTAXI\b|\bRADIOTAXI\b|\bCAB\b/],
+  ['taxi', /\bTAXI\b|\bRADIOTAXI\b|\bCAB\b|\bTAXISTI\b|\bTASSISTI\b|\bTASSAMETRO\b/],
   ['alloggio', /\bHOTEL\b|\bALBERGO\b|\bB&B\b|\bB ?& ?B\b/],
   ['parcheggio', /\bPARCHEGGIO\b|\bPARKING\b|\bAUTOSTRADE\b|\bPEDAGGIO\b|\bTELEPASS\b/],
   ['pasto', /\bRISTORANTE\b|\bTRATTORIA\b|\bPIZZERIA\b|\bBAR\b|\bOSTERIA\b|\bCAFFE\b|\bCOPERTO\b|\bMENU\b/],

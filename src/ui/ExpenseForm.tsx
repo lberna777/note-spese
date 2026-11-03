@@ -20,7 +20,8 @@ export interface FormProps {
   defaultDate: string;
   // Sul computer: il destinatario scelto nella barra laterale, proposto per le spese nuove.
   preferredRecipientId?: string | null;
-  onSaved: () => void;
+  // Riceve la spesa salvata (non dopo un'eliminazione): serve per mostrare il mese in cui è finita.
+  onSaved: (saved?: Expense) => void;
   onCancel: () => void;
 }
 
@@ -134,11 +135,17 @@ export function ExpenseForm(props: FormProps) {
     };
     const position = positionAfterEdit(existing, date, recipientId);
     if (position !== undefined) exp.position = position;
-    await putExpense(exp);
-    if (finalSupplier && !isAuto) {
-      await putKnownSupplier({ name: finalSupplier, category, place: finalPlace });
+    try {
+      await putExpense(exp);
+    } catch (err) {
+      // Archivio pieno o non disponibile: meglio dirlo che lasciare il modulo aperto senza spiegazioni.
+      return setError(`La spesa non è stata salvata (${String((err as Error)?.message ?? err)}). Riprova; se succede ancora, fai un backup e libera spazio sul telefono.`);
     }
-    props.onSaved();
+    if (finalSupplier && !isAuto) {
+      // Il fornitore noto è solo un aiuto per la prossima volta: se non si scrive, la spesa resta salvata.
+      await putKnownSupplier({ name: finalSupplier, category, place: finalPlace }).catch(() => undefined);
+    }
+    props.onSaved(exp);
   }
 
   async function remove() {

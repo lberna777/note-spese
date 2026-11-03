@@ -25,6 +25,8 @@
 html, body { margin: 0; background: var(--bg); color: var(--text); }
 body { font-size: 16px; line-height: 1.35; font-weight: 400; -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased; font-family: var(--font); }
 button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+/* Su iPhone due tocchi rapidi sullo stesso pulsante (le frecce del riordino) farebbero lo zoom invece di due clic. */
+button, a, label, select { touch-action: manipulation; }
 h1, h2, p { margin: 0; }
 strong { font-weight: 600; }
 .grow { flex: 1; min-width: 0; }
@@ -52,7 +54,7 @@ strong { font-weight: 600; }
 .btn-fill, .salva { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn-out, .btn-plain { background: transparent; border-color: var(--line-accent); color: var(--text); }
 .btn-fill:disabled, .btn-out:disabled, .btn-plain:disabled { opacity: 0.4; cursor: default; }
-.btn-fill:active, .btn-out:active, .salva:active, .shoot:active, .side:active { opacity: 0.7; }
+.btn-fill:active, .btn-out:active, .salva:active, .shoot:active, .side:active, .icon-btn:active, .reorder-toggle:active { opacity: 0.5; }
 .link-btn { background: none; border: 0; padding: 0; min-height: 44px; text-align: left; color: var(--accent-text); font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
 .icon-btn { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; color: var(--accent-text); cursor: pointer; padding: 0; flex: none; }
 
@@ -112,7 +114,7 @@ progress { width: 70%; max-width: 360px; height: 6px; accent-color: var(--accent
 .sect { padding-top: 26px; }
 .sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; }
 .sect-tools { display: inline-flex; align-items: baseline; gap: 14px; }
-.reorder-toggle { background: none; border: 0; padding: 0; min-height: 24px; color: var(--accent-text); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+.reorder-toggle { background: none; border: 0; padding: 0 8px; margin: -10px -8px; min-height: 44px; color: var(--accent-text); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
 .row.exp.reorder { cursor: default; padding: 4px 0; }
 .row.exp.reorder .grow { padding: 9px 0; }
 .row.exp.reorder .right-col { padding: 9px 0; }

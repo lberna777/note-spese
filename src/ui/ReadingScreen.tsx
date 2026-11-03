@@ -26,7 +26,13 @@ export function ReadingScreen(props: { file: Blob; data: AppData; notice?: strin
       } catch {
         /* se la riduzione fallisce si tiene l'originale */
       }
-      await putPhoto({ id: photoId, blob });
+      // Se l'archivio rifiuta la foto (spazio pieno) si prosegue lo stesso: altrimenti la schermata resterebbe ferma qui.
+      let photoWarning: string | null = null;
+      try {
+        await putPhoto({ id: photoId, blob });
+      } catch (err) {
+        photoWarning = `La foto non è stata salvata (${String((err as Error)?.message ?? err)}): la spesa resterà senza giustificativo.`;
+      }
       if (cancelled) return;
       setPhase('Leggo lo scontrino sul telefono…');
       let draft: ReceiptDraft = {};
@@ -42,6 +48,7 @@ export function ReadingScreen(props: { file: Blob; data: AppData; notice?: strin
       } catch (err) {
         warning = `Lettura non riuscita (${String((err as Error)?.message ?? err)}): compila i campi a mano.`;
       }
+      if (photoWarning) warning = warning ? `${photoWarning} ${warning}` : photoWarning;
       if (props.notice) warning = warning ? `${props.notice} ${warning}` : props.notice;
       if (!cancelled) props.onDone({ photoId, draft, warning });
     })();

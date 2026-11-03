@@ -175,4 +175,32 @@ describe('OpenCV: raddrizzamento fine, bordo scuro e rotazione', () => {
       }
     expect(sum / n).toBeGreaterThan(235);
   }, 60_000);
+
+  it('scontrino con pochissimo testo (ricevuta del taxi): il testo resta, la carta resta bianca', async () => {
+    // Carta quasi uniforme su fondo scuro, tre righe brevi in alto: l'inchiostro è ben sotto l'1% dei pixel.
+    const w = 400;
+    const h = 700;
+    const data = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        let v = 236 + ((x * 3 + y * 5) % 5);
+        if (y >= 60 && y < 120 && y % 20 < 5 && x >= 50 && x < 110 && (x % 6) < 4) v = 40;
+        data[i] = data[i + 1] = data[i + 2] = v;
+        data[i + 3] = 255;
+      }
+    const all: Quad = [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+    const out = await warpDocument({ data, width: w, height: h }, all, 'documento');
+    let dark = 0;
+    let paper = 0;
+    let paperN = 0;
+    for (let y = 0; y < out.height; y++)
+      for (let x = 0; x < out.width; x++) {
+        const v = out.data[(y * out.width + x) * 4];
+        if (v < 100) dark++;
+        if (y > out.height * 0.5) { paper += v; paperN++; }
+      }
+    expect(dark).toBeGreaterThan(200); // le righe ci sono ancora
+    expect(paper / paperN).toBeGreaterThan(235); // e la carta non è diventata nera
+  }, 60_000);
 });

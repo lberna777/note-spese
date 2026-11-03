@@ -270,6 +270,32 @@ describe('fixture di scontrini finti', () => {
     expect(d.category).toBeUndefined();
     expect(d.invoice).toEqual({ value: false, confidence: 'alta' });
   });
+  it('taxi, ricevuta del tassametro: «TOTALE CORSA» dopo l\'importo della corsa e il supplemento', () => {
+    const d = parseReceipt(fixture('taxi-tassametro'), noKnown);
+    expect(d.amountCents).toEqual({ value: 1620, confidence: 'alta' });
+    expect(d.date).toEqual({ value: '2026-11-03', confidence: 'alta' });
+    expect(d.place?.value).toBe('Bologna');
+    expect(d.category?.value).toBe('taxi');
+  });
+  it('taxi, ricevuta breve con «Tot. Euro» e ora con il punto', () => {
+    const d = parseReceipt(fixture('taxi-ricevuta-breve'), noKnown);
+    expect(d.amountCents).toEqual({ value: 1800, confidence: 'alta' });
+    expect(d.date?.value).toBe('2026-11-05');
+    expect(d.category?.value).toBe('taxi');
+  });
+  it('taxi, importo in euro interi («Euro 25»): proposto ma da confermare', () => {
+    const d = parseReceipt(fixture('taxi-euro-interi'), noKnown);
+    expect(d.amountCents).toEqual({ value: 2500, confidence: 'bassa' });
+    expect(d.date?.value).toBe('2026-11-06');
+    expect(d.category?.value).toBe('taxi');
+  });
+  it('taxi pagato con carta, «TOT. EUR»', () => {
+    const d = parseReceipt(fixture('taxi-carta-milano'), noKnown);
+    expect(d.amountCents).toEqual({ value: 2340, confidence: 'alta' });
+    expect(d.date?.value).toBe('2026-11-10');
+    expect(d.place?.value).toBe('Milano');
+    expect(d.category?.value).toBe('taxi');
+  });
   it('testo vuoto: solo la fattura (no, bassa)', () => {
     expect(parseReceipt('', ctx)).toEqual({ invoice: { value: false, confidence: 'bassa' } });
   });

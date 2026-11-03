@@ -1,0 +1,6 @@
+TAXI 3570
+Ricevuta per servizio taxi
+Licenza n. 215
+Data 06/11/2026
+Da: Aeroporto  A: Centro
+Euro 25

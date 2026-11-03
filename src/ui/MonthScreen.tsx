@@ -63,7 +63,7 @@ export function MonthScreen(props: {
         <span class="lbl lbl-accent">{r.name}</span>
         <span class="sect-tools">
           {t.rows.length >= 2 ? (
-            <button type="button" class="reorder-toggle" onClick={() => setReordering(reordering === r.id ? null : r.id)}>
+            <button type="button" class="reorder-toggle" aria-pressed={reordering === r.id} onClick={() => setReordering(reordering === r.id ? null : r.id)}>
               {reordering === r.id ? 'Fine' : 'Riordina'}
             </button>
           ) : null}

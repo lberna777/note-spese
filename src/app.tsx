@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'preact/hooks';
-import { putExpenses } from './db';
-import { moveRow } from './order';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { listExpenses, putExpenses } from './db';
+import { moveRow, orderRows } from './order';
 import { currentMonth, todayIso } from './labels';
 import { applyTheme } from './theme';
 import type { Expense, ReceiptDraft, Recipient } from './types';
@@ -39,6 +39,8 @@ export function App() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<string | null>(null);
+  // Spostamenti in coda: ogni tocco parte dall'ordine lasciato dal precedente (vedi onMove).
+  const moves = useRef<Promise<void>>(Promise.resolve());
 
   // Il tema e la scelta Automatico · Chiaro · Scuro si applicano appena i dati sono pronti; con Automatico
   // si riapplicano quando il sistema cambia, per aggiornare il colore della barra del browser.
@@ -86,12 +88,18 @@ export function App() {
     setSelectedExpense(existing.id);
     setOverlay({ kind: 'form', existing });
   };
-  // Riordino a mano: scrive le nuove posizioni e ricarica.
-  const onMove = async (rows: Expense[], id: string, dir: -1 | 1) => {
-    const moved = moveRow(rows, id, dir);
-    if (!moved) return;
-    await putExpenses(moved);
-    await reload();
+  // Riordino a mano: scrive le nuove posizioni e ricarica. Tocchi ravvicinati (tre volte «giù» per portare una
+  // spesa in fondo) arrivano prima che la schermata si aggiorni: si mettono in coda e ognuno rilegge l'ordine
+  // dall'archivio, altrimenti tutti partirebbero dallo stesso ordine vecchio e la spesa si sposterebbe di un posto solo.
+  const onMove = (rows: Expense[], id: string, dir: -1 | 1) => {
+    const ids = new Set(rows.map((e) => e.id));
+    const step = moves.current.then(async () => {
+      const current = orderRows((await listExpenses()).filter((e) => ids.has(e.id)));
+      const moved = moveRow(current, id, dir);
+      if (moved) await putExpenses(moved);
+    });
+    // Uno spostamento fallito non blocca i successivi; si ricarica comunque per mostrare l'ordine vero.
+    moves.current = step.catch(() => undefined).then(() => reload());
   };
   const onManual = () => setOverlay({ kind: 'form' });
 
@@ -125,7 +133,11 @@ export function App() {
           warning={overlay.warning}
           defaultDate={defaultDate}
           preferredRecipientId={desktop ? group?.r.id ?? null : null}
-          onSaved={() => void close()}
+          onSaved={(saved) => {
+            // La data letta dalla foto può cadere in un altro mese: si va lì, altrimenti la spesa sembrerebbe sparita.
+            if (saved && saved.date.slice(0, 7) !== month) setMonth(saved.date.slice(0, 7));
+            void close();
+          }}
           onCancel={() => void close()}
         />
       ) : null}
