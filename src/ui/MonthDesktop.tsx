@@ -1,5 +1,5 @@
 import { useRef } from 'preact/hooks';
-import { categoryText, reimburseLabel } from '../export/rows';
+import { categoryText, PERSONAL, reimburseLabel } from '../export/rows';
 import { kindLabel, monthLabel, PAYER_SHORT, shortDate } from '../labels';
 import { formatEuro } from '../money';
 import type { Expense, Recipient } from '../types';
@@ -130,7 +130,7 @@ export function MonthDesktop(props: {
 export function NotePanel(props: { data: AppData; month: string; group: MonthGroup | null; onEdit: (e: Expense) => void }) {
   const { data, month, group } = props;
   const recipient: Recipient | null = group?.r ?? null;
-  const { totals, busy, msg, run } = useNoteExport(data, recipient, month, true);
+  const { totals, personal, busy, msg, run } = useNoteExport(data, recipient, month, true);
   const rows = totals?.rows ?? [];
   const required = rows.filter(needsReceipt);
   const have = required.filter((e) => e.photoId);
@@ -153,6 +153,25 @@ export function NotePanel(props: { data: AppData; month: string; group: MonthGro
         <button type="button" class="btn-out" disabled={!!busy || !rows.length} onClick={() => void run('xlsx')}>{busy === 'xlsx' ? 'Preparo…' : 'Scarica l’Excel'}</button>
         {msg ? <p class="status" role="status">{msg}</p> : null}
       </div>
+      {recipient?.kind === 'cliente' && rows.length ? (
+        // Estratto per l'azienda: solo le spese di questo cliente pagate con la carta personale.
+        <div data-testid="personal-extract">
+          <div class="lbl">{PERSONAL.section}</div>
+          {personal ? (
+            <>
+              <div class="tot">
+                <div class="big"><span>{personal.rows.length === 1 ? '1 spesa' : `${personal.rows.length} spese`}</span><span class="num">{formatEuro(personal.totalCents)}</span></div>
+              </div>
+              <div class="panel-actions extract-actions">
+                <button type="button" class="btn-out" disabled={!!busy} onClick={() => void run('pdf', true)}>{busy === 'personal-pdf' ? 'Preparo…' : 'PDF per l’azienda'}</button>
+                <button type="button" class="btn-out" disabled={!!busy} onClick={() => void run('xlsx', true)}>{busy === 'personal-xlsx' ? 'Preparo…' : 'Excel per l’azienda'}</button>
+              </div>
+            </>
+          ) : (
+            <p class="giust-note">{PERSONAL.none}</p>
+          )}
+        </div>
+      ) : null}
       <div>
         <div class="lbl">Giustificativi · {have.length} di {required.length}</div>
         {rows.length ? (

@@ -38,6 +38,30 @@ export function monthTotals(
   return { rows, totalCents, paidByCompanyCents, advancedPersonallyCents, toReimburseCents };
 }
 
+// Estratto per l'azienda della nota di un cliente: solo le spese pagate con la carta personale, nello stesso
+// ordine della nota; `refs[i]` è il numero che la riga i ha nella nota per il cliente (per confrontarle).
+export interface PersonalExtract extends MonthTotals {
+  refs: number[];
+}
+
+export function personalExtract(t: MonthTotals): PersonalExtract {
+  const rows: Expense[] = [];
+  const refs: number[] = [];
+  t.rows.forEach((e, i) => {
+    if (e.payer !== 'personale') return;
+    rows.push(e);
+    refs.push(i + 1);
+  });
+  const total = rows.reduce((s, e) => s + e.amountCents, 0);
+  return { rows, refs, totalCents: total, paidByCompanyCents: 0, advancedPersonallyCents: total, toReimburseCents: total };
+}
+
+// Nome dell'azienda a cui va l'estratto: il destinatario di tipo «azienda», altrimenti il nome del tema.
+export function companyNameOf(recipients: Recipient[], themeCompanyName: string): string {
+  const r = recipients.find((x) => x.kind === 'azienda' && x.active) ?? recipients.find((x) => x.kind === 'azienda');
+  return r?.name || themeCompanyName || 'Azienda';
+}
+
 // Per ogni destinatario quanto il consulente ha anticipato nel mese.
 export function advanceSummary(
   expenses: Expense[],

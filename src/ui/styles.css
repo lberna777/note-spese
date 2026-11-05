@@ -182,6 +182,7 @@ progress { width: 70%; max-width: 360px; height: 6px; accent-color: var(--accent
 .note-head strong { color: var(--text); font-weight: 600; }
 .btn-pair { display: flex; gap: 12px; padding: 24px 20px 0; }
 .btn-pair > button { flex: 1; }
+.btn-pair.in-group { padding: 12px 20px; }
 .sheet-body > .status { padding: 0 20px; }
 
 .demo-tag { align-self: flex-start; margin: 10px 0 0; }
@@ -344,6 +345,7 @@ table.expenses { width: 100%; border-collapse: collapse; }
 .tot > div.big { font-size: 17px; color: var(--accent-text); border-bottom-color: var(--line-accent); font-weight: 400; }
 .panel-actions { display: flex; flex-direction: column; gap: 10px; }
 .panel-actions .btn-fill, .panel-actions .btn-out { width: 100%; }
+.extract-actions { margin-top: 14px; }
 .giust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .thumb { display: grid; place-items: center; aspect-ratio: 3 / 4; padding: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); cursor: pointer; color: var(--muted); }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }

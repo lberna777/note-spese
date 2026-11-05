@@ -1,4 +1,4 @@
-import { categoryText, payerText, reimburseLabel, TOTAL_LABELS } from '../export/rows';
+import { categoryText, payerText, PERSONAL, reimburseLabel, TOTAL_LABELS } from '../export/rows';
 import { monthLabel, shortDate } from '../labels';
 import { formatEuro } from '../money';
 import type { Recipient } from '../types';
@@ -9,7 +9,7 @@ import type { AppData } from './useData';
 // Nota spese del telefono: foglio con righe, totali e, in coda, PDF ed Excel (condivisione).
 export function NoteScreen(props: { data: AppData; recipient: Recipient; month: string; onClose: () => void }) {
   const { data, recipient, month } = props;
-  const { totals, busy, msg, run } = useNoteExport(data, recipient, month, false);
+  const { totals, personal, busy, msg, run } = useNoteExport(data, recipient, month, false);
   if (!totals) return null;
 
   return (
@@ -38,6 +38,25 @@ export function NoteScreen(props: { data: AppData; recipient: Recipient; month: 
         <button type="button" class="btn-fill" disabled={!!busy || !totals.rows.length} onClick={() => void run('pdf')}>{busy === 'pdf' ? 'Preparo…' : 'PDF'}</button>
         <button type="button" class="btn-plain" disabled={!!busy || !totals.rows.length} onClick={() => void run('xlsx')}>{busy === 'xlsx' ? 'Preparo…' : 'Excel'}</button>
       </div>
+      {recipient.kind === 'cliente' && totals.rows.length ? (
+        // Estratto per l'azienda: solo le spese di questo cliente pagate con la carta personale.
+        <Group title={PERSONAL.section} footer={personal ? 'Documento separato per l’azienda: solo le spese di questo cliente pagate con la carta personale, con gli scontrini.' : undefined}>
+          {personal ? (
+            <>
+              <div class="row">
+                <span class="grow">{personal.rows.length === 1 ? '1 spesa' : `${personal.rows.length} spese`} con carta personale</span>
+                <span class="amount-accent">{formatEuro(personal.totalCents)}</span>
+              </div>
+              <div class="btn-pair in-group">
+                <button type="button" class="btn-plain" disabled={!!busy} onClick={() => void run('pdf', true)}>{busy === 'personal-pdf' ? 'Preparo…' : 'PDF'}</button>
+                <button type="button" class="btn-plain" disabled={!!busy} onClick={() => void run('xlsx', true)}>{busy === 'personal-xlsx' ? 'Preparo…' : 'Excel'}</button>
+              </div>
+            </>
+          ) : (
+            <div class="row empty">{PERSONAL.none}</div>
+          )}
+        </Group>
+      ) : null}
       {msg ? <p class="status" role="status">{msg}</p> : null}
     </Sheet>
   );

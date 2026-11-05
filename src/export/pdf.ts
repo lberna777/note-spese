@@ -2,12 +2,13 @@
 // la variante chiara del tema, logo e nome in alto, «Nota spese» leggero e grande con i dati sulla stessa riga,
 // etichette in maiuscoletto spaziato, filetti al posto dei riquadri, importi a destra in grassetto, totali con
 // «Da rimborsare» in accentText, piè di pagina con «pagina N di M» e, in coda, i giustificativi numerati come le
-// righe, due per pagina affiancati. Carattere: Nunito Sans incorporato (tema `avenir`) o Helvetica (`system`).
+// righe, due per pagina affiancati. Con `input.personal` lo stesso impianto diventa l'estratto per l'azienda delle
+// spese del cliente pagate con la carta personale: colonna «Rif.» al posto di «Pagato con», un solo totale. Carattere: Nunito Sans incorporato (tema `avenir`) o Helvetica (`system`).
 import type { jsPDF } from 'jspdf';
 import { formatEuro } from '../money';
 import { fullDate, monthLabel, shortDate } from '../labels';
 import { flatten, hexToRgb } from '../theme';
-import { categoryText, payerText, reimburseLabel, TOTAL_LABELS, type ExportInput } from './rows';
+import { categoryText, payerText, PERSONAL, reimburseLabel, TOTAL_LABELS, type ExportInput } from './rows';
 
 type Rgb = [number, number, number];
 type Weight = 'light' | 'regular' | 'bold';
@@ -29,7 +30,7 @@ export const PDF_FONT = { light: 'NunitoSansLight', regular: 'NunitoSans' } as c
 export async function buildPdf(input: ExportInput): Promise<Blob> {
   // Caricamento al bisogno: jsPDF e i caratteri pesano e non servono all'avvio.
   const [{ jsPDF: JsPdf }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
-  const { headerName, recipient, month, totals, photos, theme, logo } = input;
+  const { headerName, recipient, month, totals, photos, theme, logo, personal } = input;
   const embed = theme.font === 'avenir';
   const doc: jsPDF = new JsPdf({ unit: 'mm', format: 'a4', orientation: 'landscape' });
   if (embed) {
@@ -108,15 +109,19 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
     return headTop + h + 4;
   };
 
-  // --- Prima pagina: a chi è rivolta la nota (interna o per il cliente) in alto a destra; poi titolo e dati su una riga ---
-  const headerBottom = header({ text: recipient.kind === 'azienda' ? 'Nota spese interna' : 'Nota spese per il cliente', color: col.accentText });
+  // --- Prima pagina: a chi è rivolta la nota (interna, per il cliente o estratto per l'azienda) in alto a destra;
+  // poi titolo e dati su una riga ---
+  const badge = personal ? PERSONAL.badge : recipient.kind === 'azienda' ? 'Nota spese interna' : 'Nota spese per il cliente';
+  const headerBottom = header({ text: badge, color: col.accentText });
   const titleY = headerBottom + 15;
   font('light', 26);
   doc.setTextColor(...col.text);
-  doc.text('Nota spese', margin, titleY);
-  const meta: [string, string][] = [['Consulente', headerName], ['Destinatario', recipient.name], ['Mese', monthLabel(month)]];
+  doc.text(personal ? PERSONAL.title : 'Nota spese', margin, titleY);
+  const meta: [string, string][] = personal
+    ? [['Destinatario', personal.companyName], ['Cliente', recipient.name], ['Consulente', headerName], ['Mese', monthLabel(month)]]
+    : [['Consulente', headerName], ['Destinatario', recipient.name], ['Mese', monthLabel(month)]];
   const metaX0 = margin + 78;
-  const metaW = (contentW - 78) / 3;
+  const metaW = (contentW - 78) / meta.length;
   meta.forEach(([k, val], i) => {
     const x = metaX0 + i * metaW;
     caps(k, x, titleY - 6.5, 6.5, col.muted);
@@ -125,19 +130,33 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
     doc.text(val, x, titleY, { maxWidth: metaW - 4 });
   });
 
-  // --- Tabella delle spese: tutta la larghezza utile, Località e Fornitore larghe, Km e Fattura strette ---
-  const heads = ['N.', 'Data', 'Località', 'Fornitore', 'Tipologia', 'Km', 'Importo', 'Fattura', 'Pagato con'];
-  const widths = [8, 16, 50, 75, 30, 12, 26, 18, 34]; // somma = 269 mm, la larghezza utile
+  // Estratto: una riga che spiega che cosa contiene e che cos'è «Rif.».
+  if (personal) {
+    font('light', 8.5);
+    doc.setTextColor(...col.muted);
+    doc.text(PERSONAL.intro(recipient.name), margin, titleY + 8, { maxWidth: contentW });
+  }
+
+  // --- Tabella delle spese: tutta la larghezza utile, Località e Fornitore larghe, Km e Fattura strette.
+  // Nell'estratto «Pagato con» non serve (è sempre la carta personale): al suo posto «Rif.», il numero nella nota ---
+  const heads = personal
+    ? ['N.', 'Rif.', 'Data', 'Località', 'Fornitore', 'Tipologia', 'Km', 'Importo', 'Fattura']
+    : ['N.', 'Data', 'Località', 'Fornitore', 'Tipologia', 'Km', 'Importo', 'Fattura', 'Pagato con'];
+  // somma = 269 mm, la larghezza utile
+  const widths = personal ? [8, 12, 16, 58, 85, 30, 12, 30, 18] : [8, 16, 50, 75, 30, 12, 26, 18, 34];
+  const off = personal ? 1 : 0; // le colonne da «Data» in poi slittano di una
+  const C = { km: 5 + off, amount: 6 + off, invoice: 7 + off };
   const amountPad = 5;
-  const rightCols = new Set([5, 6]);
+  const rightCols = new Set([C.km, C.amount]);
   autoTable(doc, {
-    startY: titleY + 10,
+    startY: titleY + (personal ? 14 : 10),
     // sulle pagine successive la tabella riparte sotto l'intestazione, con le etichette delle colonne ripetute
     margin: { left: margin, right: margin, top: headerBottom + 8, bottom: 20 },
     theme: 'plain',
     head: [heads],
     body: totals.rows.map((e, i) => [
       String(i + 1),
+      ...(personal ? [String(personal.refs[i])] : []),
       shortDate(e.date),
       e.place,
       e.supplier,
@@ -145,7 +164,7 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
       e.km != null ? String(e.km) : '',
       formatEuro(e.amountCents),
       e.invoice ? 'sì' : 'no',
-      payerText(e),
+      ...(personal ? [] : [payerText(e)]),
     ]),
     styles: {
       font: family('light').name, fontStyle: family('light').style, fontSize: 9, cellPadding: { top: 2.6, bottom: 2.6, left: 0, right: 3 },
@@ -156,21 +175,22 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
     columnStyles: {
       ...Object.fromEntries(widths.map((w, i) => [i, { cellWidth: w }])),
       0: { cellWidth: widths[0], textColor: col.muted },
-      5: { cellWidth: widths[5], halign: 'right' },
-      6: {
-        cellWidth: widths[6], halign: 'right', cellPadding: { top: 2.6, bottom: 2.6, left: 0, right: amountPad },
+      ...(personal ? { 1: { cellWidth: widths[1], textColor: col.muted } } : {}),
+      [C.km]: { cellWidth: widths[C.km], halign: 'right' },
+      [C.amount]: {
+        cellWidth: widths[C.amount], halign: 'right', cellPadding: { top: 2.6, bottom: 2.6, left: 0, right: amountPad },
         font: family('bold').name, fontStyle: family('bold').style,
       },
     },
     didParseCell(d) {
       if (d.section === 'head') d.cell.text = []; // le etichette si disegnano a mano, spaziate
-      if (d.section === 'body' && d.column.index === 7 && d.cell.raw === 'sì') d.cell.styles.textColor = col.accentText;
-      if (d.section === 'body' && d.column.index === 7 && d.cell.raw === 'no') d.cell.styles.textColor = col.muted;
+      if (d.section === 'body' && d.column.index === C.invoice && d.cell.raw === 'sì') d.cell.styles.textColor = col.accentText;
+      if (d.section === 'body' && d.column.index === C.invoice && d.cell.raw === 'no') d.cell.styles.textColor = col.muted;
     },
     didDrawCell(d) {
       if (d.section !== 'head') return;
       const right = rightCols.has(d.column.index);
-      const x = right ? d.cell.x + d.cell.width - (d.column.index === 6 ? amountPad : 3) : d.cell.x;
+      const x = right ? d.cell.x + d.cell.width - (d.column.index === C.amount ? amountPad : 3) : d.cell.x;
       caps(heads[d.column.index], x, d.cell.y + d.cell.height - 4, 6.2, col.muted, { align: right ? 'right' : 'left' });
     },
     didDrawPage(d) {
@@ -181,12 +201,17 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
   // --- Totali: blocco proprio, allineato a destra sotto la tabella, con «Da rimborsare» in accentText ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let y: number = ((doc as any).lastAutoTable?.finalY ?? 60) + 10;
-  const rowsT: [string, number, boolean][] = [
-    [TOTAL_LABELS.total, totals.totalCents, false],
-    [TOTAL_LABELS.paidByCompany, totals.paidByCompanyCents, false],
-    [TOTAL_LABELS.advanced, totals.advancedPersonallyCents, false],
-    [reimburseLabel(recipient), totals.toReimburseCents, true],
-  ];
+  const rowsT: [string, number, boolean][] = personal
+    ? [
+        [PERSONAL.total, totals.totalCents, false],
+        [PERSONAL.reimburse, totals.toReimburseCents, true],
+      ]
+    : [
+        [TOTAL_LABELS.total, totals.totalCents, false],
+        [TOTAL_LABELS.paidByCompany, totals.paidByCompanyCents, false],
+        [TOTAL_LABELS.advanced, totals.advancedPersonallyCents, false],
+        [reimburseLabel(recipient), totals.toReimburseCents, true],
+      ];
   if (y + rowsT.length * 8 + 6 > pageH - 20) {
     doc.addPage();
     y = header() + 10;
@@ -234,7 +259,7 @@ export async function buildPdf(input: ExportInput): Promise<Blob> {
   for (const group of groups) {
     doc.addPage();
     const hb = header();
-    caps(`Giustificativi · ${recipient.name} · ${monthLabel(month)}`, margin, hb + 9, 7, col.muted);
+    caps(`Giustificativi · ${personal ? `${PERSONAL.title} · ` : ''}${recipient.name} · ${monthLabel(month)}`, margin, hb + 9, 7, col.muted);
     const top = hb + 19;
     const imgTop = top + 6;
     const imgBottom = pageH - 20;
